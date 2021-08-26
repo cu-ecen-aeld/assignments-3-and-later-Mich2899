@@ -1,0 +1,218 @@
+[2021-08-26 02:58:02Z INFO HostContext] No proxy settings were found based on environmental variables (http_proxy/https_proxy/HTTP_PROXY/HTTPS_PROXY)
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Root': '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 02:58:02Z INFO HostContext] Well known config file 'Credentials': '/home/michelle/assignment-1-Mich2899/actions-runner/.credentials'
+[2021-08-26 02:58:02Z INFO Listener] Runner is built for Linux (X64) - linux-x64.
+[2021-08-26 02:58:02Z INFO Listener] RuntimeInformation: Linux 5.11.0-27-generic #29~20.04.1-Ubuntu SMP Wed Aug 11 15:58:17 UTC 2021.
+[2021-08-26 02:58:02Z INFO Listener] Version: 2.280.3
+[2021-08-26 02:58:02Z INFO Listener] Commit: 409920e9f03bd38fe6e58807f069394993ce32e4
+[2021-08-26 02:58:02Z INFO Listener] Culture: en-US
+[2021-08-26 02:58:02Z INFO Listener] UI Culture: en-US
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Root': '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 02:58:02Z INFO Listener] Validating directory permissions for: '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 02:58:02Z INFO CommandLineParser] Parse
+[2021-08-26 02:58:02Z INFO CommandLineParser] Parsing 5 args
+[2021-08-26 02:58:02Z INFO CommandLineParser] parsing argument
+[2021-08-26 02:58:02Z INFO CommandLineParser] HasArgs: False
+[2021-08-26 02:58:02Z INFO CommandLineParser] Adding Command: configure
+[2021-08-26 02:58:02Z INFO CommandLineParser] parsing argument
+[2021-08-26 02:58:02Z INFO CommandLineParser] HasArgs: True
+[2021-08-26 02:58:02Z INFO CommandLineParser] arg: url
+[2021-08-26 02:58:02Z INFO CommandLineParser] parsing argument
+[2021-08-26 02:58:02Z INFO CommandLineParser] HasArgs: True
+[2021-08-26 02:58:02Z INFO CommandLineParser] Adding option 'url': 'https://github.com/cu-ecen-aeld/assignment-1-Mich2899'
+[2021-08-26 02:58:02Z INFO CommandLineParser] parsing argument
+[2021-08-26 02:58:02Z INFO CommandLineParser] HasArgs: True
+[2021-08-26 02:58:02Z INFO CommandLineParser] arg: token
+[2021-08-26 02:58:02Z INFO CommandLineParser] parsing argument
+[2021-08-26 02:58:02Z INFO CommandLineParser] HasArgs: True
+[2021-08-26 02:58:02Z INFO CommandLineParser] Adding option 'token': '***'
+[2021-08-26 02:58:02Z INFO Listener] Arguments parsed
+[2021-08-26 02:58:02Z INFO Runner] ExecuteCommand
+[2021-08-26 02:58:02Z INFO ConfigurationStore] currentAssemblyLocation: /home/michelle/assignment-1-Mich2899/actions-runner/bin/Runner.Listener.dll
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 02:58:02Z INFO ConfigurationStore] binPath: /home/michelle/assignment-1-Mich2899/actions-runner/bin
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Root': '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 02:58:02Z INFO ConfigurationStore] RootFolder: /home/michelle/assignment-1-Mich2899/actions-runner
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Root': '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 02:58:02Z INFO HostContext] Well known config file 'Runner': '/home/michelle/assignment-1-Mich2899/actions-runner/.runner'
+[2021-08-26 02:58:02Z INFO ConfigurationStore] ConfigFilePath: /home/michelle/assignment-1-Mich2899/actions-runner/.runner
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Root': '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 02:58:02Z INFO HostContext] Well known config file 'Credentials': '/home/michelle/assignment-1-Mich2899/actions-runner/.credentials'
+[2021-08-26 02:58:02Z INFO ConfigurationStore] CredFilePath: /home/michelle/assignment-1-Mich2899/actions-runner/.credentials
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Root': '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 02:58:02Z INFO HostContext] Well known config file 'MigratedCredentials': '/home/michelle/assignment-1-Mich2899/actions-runner/.credentials_migrated'
+[2021-08-26 02:58:02Z INFO ConfigurationStore] MigratedCredFilePath: /home/michelle/assignment-1-Mich2899/actions-runner/.credentials_migrated
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 02:58:02Z INFO HostContext] Well known directory 'Root': '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 02:58:02Z INFO HostContext] Well known config file 'Service': '/home/michelle/assignment-1-Mich2899/actions-runner/.service'
+[2021-08-26 02:58:02Z INFO ConfigurationStore] ServiceConfigFilePath: /home/michelle/assignment-1-Mich2899/actions-runner/.service
+[2021-08-26 02:58:02Z INFO CommandSettings] Flag 'help': 'False'
+[2021-08-26 02:58:02Z INFO CommandSettings] Flag 'version': 'False'
+[2021-08-26 02:58:02Z INFO CommandSettings] Flag 'commit': 'False'
+[2021-08-26 02:58:02Z INFO CommandSettings] Flag 'check': 'False'
+[2021-08-26 02:58:02Z INFO CommandSettings] Command 'configure': 'True'
+[2021-08-26 02:58:02Z INFO Terminal] WRITE LINE: 
+[2021-08-26 02:58:02Z INFO Terminal] WRITE LINE: --------------------------------------------------------------------------------
+[2021-08-26 02:58:02Z INFO Terminal] WRITE LINE: |        ____ _ _   _   _       _          _        _   _                      |
+[2021-08-26 02:58:02Z INFO Terminal] WRITE LINE: |       / ___(_) |_| | | |_   _| |__      / \   ___| |_(_) ___  _ __  ___      |
+[2021-08-26 02:58:02Z INFO Terminal] WRITE LINE: |      | |  _| | __| |_| | | | | '_ \    / _ \ / __| __| |/ _ \| '_ \/ __|     |
+[2021-08-26 02:58:02Z INFO Terminal] WRITE LINE: |      | |_| | | |_|  _  | |_| | |_) |  / ___ \ (__| |_| | (_) | | | \__ \     |
+[2021-08-26 02:58:02Z INFO Terminal] WRITE LINE: |       \____|_|\__|_| |_|\__,_|_.__/  /_/   \_\___|\__|_|\___/|_| |_|___/     |
+[2021-08-26 02:58:02Z INFO Terminal] WRITE LINE: |                                                                              |
+[2021-08-26 02:58:02Z INFO Terminal] WRITE: |                       
+[2021-08-26 02:58:02Z INFO Terminal] WRITE: Self-hosted runner registration
+[2021-08-26 02:58:02Z INFO Terminal] WRITE LINE:                         |
+[2021-08-26 02:58:02Z INFO Terminal] WRITE LINE: |                                                                              |
+[2021-08-26 02:58:02Z INFO Terminal] WRITE LINE: --------------------------------------------------------------------------------
+[2021-08-26 02:58:02Z INFO ConfigurationManager] ConfigureAsync
+[2021-08-26 02:58:02Z INFO ConfigurationStore] IsConfigured()
+[2021-08-26 02:58:02Z INFO ConfigurationStore] IsConfigured: False
+[2021-08-26 02:58:02Z INFO ConfigurationManager] Is configured: False
+[2021-08-26 02:58:02Z INFO CommandSettings] Arg 'url': 'https://github.com/cu-ecen-aeld/assignment-1-Mich2899'
+[2021-08-26 02:58:02Z INFO CommandSettings] Remove url from Arg dictionary.
+[2021-08-26 02:58:02Z INFO CommandSettings] Arg 'token': '***'
+[2021-08-26 02:58:02Z INFO CommandSettings] Remove token from Arg dictionary.
+[2021-08-26 02:58:03Z INFO ConfigurationManager] Http response code: OK from 'POST https://api.github.com/actions/runner-registration'
+[2021-08-26 02:58:03Z INFO ConfigurationManager] cred retrieved via GitHub auth
+[2021-08-26 02:58:03Z INFO RunnerServer] Establish connection with 100 seconds timeout.
+[2021-08-26 02:58:03Z INFO GitHubActionsService] Starting operation Location.GetConnectionData
+[2021-08-26 02:58:03Z INFO RunnerServer] Establish connection with 60 seconds timeout.
+[2021-08-26 02:58:03Z INFO GitHubActionsService] Starting operation Location.GetConnectionData
+[2021-08-26 02:58:03Z INFO RunnerServer] Establish connection with 60 seconds timeout.
+[2021-08-26 02:58:03Z INFO GitHubActionsService] Starting operation Location.GetConnectionData
+[2021-08-26 02:58:04Z INFO GitHubActionsService] Finished operation Location.GetConnectionData
+[2021-08-26 02:58:04Z INFO GitHubActionsService] Finished operation Location.GetConnectionData
+[2021-08-26 02:58:04Z INFO GitHubActionsService] Finished operation Location.GetConnectionData
+[2021-08-26 02:58:04Z INFO Terminal] WRITE LINE: 
+[2021-08-26 02:58:04Z INFO ConfigurationManager] Test Connection complete.
+[2021-08-26 02:58:04Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 02:58:04Z INFO HostContext] Well known directory 'Root': '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 02:58:04Z INFO HostContext] Well known config file 'RSACredentials': '/home/michelle/assignment-1-Mich2899/actions-runner/.credentials_rsaparams'
+[2021-08-26 02:58:04Z INFO RSAFileKeyManager] Creating new RSA key using 2048-bit key length
+[2021-08-26 02:58:04Z INFO RSAFileKeyManager] Successfully saved RSA key parameters to file /home/michelle/assignment-1-Mich2899/actions-runner/.credentials_rsaparams
+[2021-08-26 02:58:04Z INFO RSAFileKeyManager] Which: 'chmod'
+[2021-08-26 02:58:04Z INFO RSAFileKeyManager] Location: '/usr/bin/chmod'
+[2021-08-26 02:58:04Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 02:58:04Z INFO HostContext] Well known directory 'Root': '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper] Starting process:
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper]   File name: '/usr/bin/chmod'
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper]   Arguments: '600 /home/michelle/assignment-1-Mich2899/actions-runner/.credentials_rsaparams'
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper]   Working directory: '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper]   Require exit code zero: 'False'
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper]   Encoding web name:  ; code page: ''
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper]   Force kill process on cancellation: 'False'
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper]   Redirected STDIN: 'False'
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper]   Persist current code page: 'False'
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper]   Keep redirected STDIN open: 'False'
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper]   High priority process: 'False'
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper] Process started with process id 11763, waiting for process exit.
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper] STDOUT/STDERR stream read finished.
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper] STDOUT/STDERR stream read finished.
+[2021-08-26 02:58:04Z INFO ProcessInvokerWrapper] Finished process 11763 with exit code 0, and elapsed time 00:00:00.0050516.
+[2021-08-26 02:58:04Z INFO RSAFileKeyManager] Successfully set permissions for RSA key parameters file /home/michelle/assignment-1-Mich2899/actions-runner/.credentials_rsaparams
+[2021-08-26 02:58:04Z INFO CommandSettings] Arg 'runnergroup': ''
+[2021-08-26 02:58:04Z INFO CommandSettings] Flag 'unattended': 'False'
+[2021-08-26 02:58:04Z INFO PromptManager] ReadValue
+[2021-08-26 02:58:04Z INFO Terminal] WRITE: Enter the name of the runner group to add this runner to: 
+[2021-08-26 02:58:04Z INFO Terminal] WRITE: [press Enter for Default] 
+[2021-08-26 02:58:04Z INFO Terminal] READ LINE
+[2021-08-26 03:06:04Z INFO Terminal] Read value: ''
+[2021-08-26 03:06:04Z INFO PromptManager] Falling back to the default: 'Default'
+[2021-08-26 03:06:04Z INFO Terminal] WRITE LINE: 
+[2021-08-26 03:06:04Z INFO ConfigurationManager] Found a self-hosted runner group with id 1 and name Default
+[2021-08-26 03:06:04Z INFO CommandSettings] Arg 'name': ''
+[2021-08-26 03:06:04Z INFO CommandSettings] Flag 'unattended': 'False'
+[2021-08-26 03:06:04Z INFO PromptManager] ReadValue
+[2021-08-26 03:06:04Z INFO Terminal] WRITE: Enter the name of runner: 
+[2021-08-26 03:06:04Z INFO Terminal] WRITE: [press Enter for michelle-VirtualBox] 
+[2021-08-26 03:06:04Z INFO Terminal] READ LINE
+[2021-08-26 03:06:09Z INFO Terminal] Read value: ''
+[2021-08-26 03:06:09Z INFO PromptManager] Falling back to the default: 'michelle-VirtualBox'
+[2021-08-26 03:06:09Z INFO Terminal] WRITE LINE: 
+[2021-08-26 03:06:09Z INFO CommandSettings] Arg 'labels': ''
+[2021-08-26 03:06:09Z INFO CommandSettings] Flag 'unattended': 'False'
+[2021-08-26 03:06:09Z INFO PromptManager] ReadValue
+[2021-08-26 03:06:09Z INFO Terminal] WRITE: This runner will have the following labels: 'self-hosted', 'Linux', 'X64' 
+Enter any additional labels (ex. label-1,label-2): 
+[2021-08-26 03:06:09Z INFO Terminal] WRITE: [press Enter to skip] 
+[2021-08-26 03:06:09Z INFO Terminal] READ LINE
+[2021-08-26 03:06:14Z INFO Terminal] Read value: ''
+[2021-08-26 03:06:14Z INFO Terminal] WRITE LINE: 
+[2021-08-26 03:06:14Z INFO ConfigurationStore] Saving OAuth credential @ /home/michelle/assignment-1-Mich2899/actions-runner/.credentials
+[2021-08-26 03:06:14Z INFO ConfigurationStore] Credentials Saved.
+[2021-08-26 03:06:14Z INFO ConfigurationStore] HasCredentials()
+[2021-08-26 03:06:14Z INFO ConfigurationStore] stored True
+[2021-08-26 03:06:14Z INFO CredentialManager] GetCredentialProvider
+[2021-08-26 03:06:14Z INFO CredentialManager] Creating type OAuth
+[2021-08-26 03:06:14Z INFO CredentialManager] Creating credential type: OAuth
+[2021-08-26 03:06:14Z INFO RSAFileKeyManager] Loading RSA key parameters from file /home/michelle/assignment-1-Mich2899/actions-runner/.credentials_rsaparams
+[2021-08-26 03:06:14Z INFO RunnerServer] Establish connection with 100 seconds timeout.
+[2021-08-26 03:06:14Z INFO GitHubActionsService] Starting operation Location.GetConnectionData
+[2021-08-26 03:06:14Z INFO RunnerServer] Establish connection with 60 seconds timeout.
+[2021-08-26 03:06:14Z INFO GitHubActionsService] Starting operation Location.GetConnectionData
+[2021-08-26 03:06:14Z INFO RunnerServer] Establish connection with 60 seconds timeout.
+[2021-08-26 03:06:14Z INFO GitHubActionsService] Starting operation Location.GetConnectionData
+[2021-08-26 03:06:15Z INFO GitHubActionsService] Finished operation Location.GetConnectionData
+[2021-08-26 03:06:15Z INFO GitHubActionsService] Finished operation Location.GetConnectionData
+[2021-08-26 03:06:15Z INFO GitHubActionsService] Finished operation Location.GetConnectionData
+[2021-08-26 03:06:15Z WARN GitHubActionsService] Authentication failed with status code 401.
+WWW-Authenticate: Bearer
+Strict-Transport-Security: max-age=2592000
+X-TFS-ProcessId: 20711aa3-5fcb-47b2-962a-ef392c673236
+ActivityId: 4faf0d10-06ef-4939-a6a6-c9f3c0cef2ee
+X-TFS-Session: 33e801b6-4129-4efc-81ff-14aa70cbb76f
+X-VSS-E2EID: 0592fcb5-7a63-45bd-9e5a-0003c2f60419
+X-VSS-SenderDeploymentId: 6074703f-c195-632a-bd61-21691fc86fa5
+X-TFS-ServiceError: The+user+%27System%3aPublicAccess%3baaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa%27+is+not+authorized+to+access+this+resource.
+X-VSS-S2STargetService: 0000005A-0000-8888-8000-000000000000/visualstudio.com
+X-Cache: CONFIG_NOCACHE
+X-MSEdge-Ref: Ref A: C5EBC85B39794D618E39A15B4043C557 Ref B: DNAEDGE0110 Ref C: 2021-08-26T03:06:15Z
+Date: Thu, 26 Aug 2021 03:06:14 GMT
+
+[2021-08-26 03:06:15Z INFO RSAFileKeyManager] Loading RSA key parameters from file /home/michelle/assignment-1-Mich2899/actions-runner/.credentials_rsaparams
+[2021-08-26 03:06:15Z INFO RSAFileKeyManager] Loading RSA key parameters from file /home/michelle/assignment-1-Mich2899/actions-runner/.credentials_rsaparams
+[2021-08-26 03:06:15Z INFO GitHubActionsService] AAD Correlation ID for this token request: Unknown
+[2021-08-26 03:06:15Z INFO CommandSettings] Arg 'work': ''
+[2021-08-26 03:06:15Z INFO CommandSettings] Flag 'unattended': 'False'
+[2021-08-26 03:06:15Z INFO PromptManager] ReadValue
+[2021-08-26 03:06:15Z INFO Terminal] WRITE: Enter name of work folder: 
+[2021-08-26 03:06:15Z INFO Terminal] WRITE: [press Enter for _work] 
+[2021-08-26 03:06:15Z INFO Terminal] READ LINE
+[2021-08-26 03:06:18Z INFO Terminal] Read value: ''
+[2021-08-26 03:06:18Z INFO PromptManager] Falling back to the default: '_work'
+[2021-08-26 03:06:18Z INFO ConfigurationStore] Saving runner settings.
+[2021-08-26 03:06:18Z INFO ConfigurationStore] Settings Saved.
+[2021-08-26 03:06:18Z INFO Terminal] WRITE LINE: 
+[2021-08-26 03:06:18Z INFO Terminal] WRITE LINE: 
+[2021-08-26 03:06:18Z INFO SystemDControlManager] Service name 'actions.runner.cu-ecen-aeld-assignment-1-Mich2899.michelle-VirtualBox.service' display name 'GitHub Actions Runner (cu-ecen-aeld-assignment-1-Mich2899.michelle-VirtualBox)' will be used for service configuration.
+[2021-08-26 03:06:18Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 03:06:18Z INFO HostContext] Well known directory 'Root': '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 03:06:18Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 03:06:18Z INFO HostContext] Well known directory 'Bin': '/home/michelle/assignment-1-Mich2899/actions-runner/bin'
+[2021-08-26 03:06:18Z INFO HostContext] Well known directory 'Root': '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 03:06:18Z INFO UnixUtil] Which: 'chmod'
+[2021-08-26 03:06:18Z INFO UnixUtil] Location: '/usr/bin/chmod'
+[2021-08-26 03:06:18Z INFO UnixUtil] Running /usr/bin/chmod 755 "/home/michelle/assignment-1-Mich2899/actions-runner/svc.sh"
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper] Starting process:
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper]   File name: '/usr/bin/chmod'
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper]   Arguments: '755 "/home/michelle/assignment-1-Mich2899/actions-runner/svc.sh"'
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper]   Working directory: '/home/michelle/assignment-1-Mich2899/actions-runner'
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper]   Require exit code zero: 'True'
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper]   Encoding web name:  ; code page: ''
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper]   Force kill process on cancellation: 'False'
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper]   Redirected STDIN: 'False'
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper]   Persist current code page: 'False'
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper]   Keep redirected STDIN open: 'False'
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper]   High priority process: 'False'
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper] Updated oom_score_adj to 500 for PID: 11881.
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper] Process started with process id 11881, waiting for process exit.
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper] STDOUT/STDERR stream read finished.
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper] STDOUT/STDERR stream read finished.
+[2021-08-26 03:06:18Z INFO ProcessInvokerWrapper] Finished process 11881 with exit code 0, and elapsed time 00:00:00.0011429.
+[2021-08-26 03:06:18Z INFO Listener] Runner execution has finished with return code 0
