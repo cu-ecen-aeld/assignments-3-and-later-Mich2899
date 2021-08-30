@@ -12,8 +12,8 @@ fi
 
 if [ -d "$filesdir" ]
 then
-	numfile=$(find "$filesdir" -type f | wc -l)
-	string=$( grep "$searchstr" $(find "$filesdir" -type f) |wc -l)
+	numfile=$(grep -l "$searchstr" $(find "$filesdir" -type f) | wc -l)
+	string=$(grep "$searchstr" $(find "$filesdir" -type f) |wc -l)
 
 	echo "The number of files are $numfile and the number of matching lines are $string !"
 else
