@@ -1,9 +1,0 @@
-﻿{
-  "agentId": 2,
-  "agentName": "michelle-VirtualBox",
-  "poolId": 1,
-  "poolName": "Default",
-  "serverUrl": "https://pipelines.actions.githubusercontent.com/UckrpXvIpEiw0zxBiKxGvX24yQI47VQllZUts0lZEhXxEPiFRW",
-  "gitHubUrl": "https://github.com/cu-ecen-aeld/assignment-1-Mich2899",
-  "workFolder": "_work"
-}
