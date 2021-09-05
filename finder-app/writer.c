@@ -43,6 +43,7 @@ int main(int argc, char *argv[]){
 		exit(1);
 	}
 
+	//writefile stores the path and writestr stores the string
         writefile = argv[1];
         writestr = argv[2];
         len = strlen(writestr);
