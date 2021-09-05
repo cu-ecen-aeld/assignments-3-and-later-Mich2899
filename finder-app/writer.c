@@ -1,6 +1,7 @@
 //AESD- Assignment2
 //C implementation of writer.sh script
 //Author: Michelle Christian
+//cross compilation
 
 #include <stdio.h>
 #include <stdlib.h>
