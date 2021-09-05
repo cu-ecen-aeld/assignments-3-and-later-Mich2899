@@ -1,19 +1,15 @@
 CROSS_COMPILE=gcc
 
-CFLAGS=
+default:	writer
 
+writer.o:	writer.c
+	$(CROSS_COMPILE) -c writer.c
 
-DEPS=
-OBJ=writer.o
-
-%.o: %.c $(DEPS)
-	$(CROSS_COMPILE) $(CFLAGS) -c -o $@ $<
-
-default:	$(OBJ)
-	$(CROSS_COMPILE) $(CFLAGS) -o $@ $^
+writer:	writer.o
+	$(CROSS_COMPILE) writer.o -o writer
 
 clean:
-	rm -r $(OBJ) default
+	-rm -f *.o writer
 
 
 
