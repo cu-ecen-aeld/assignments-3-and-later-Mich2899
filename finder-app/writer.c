@@ -36,10 +36,14 @@ int main(int argc, char *argv[]){
 
 
 	//checking the conditions that all the arguments have been provided including filename and the string to be written to the file
-	if(argc <3 || argc>3){
+	if(argc <3){
 		syslog(LOG_ERR,"You have not provided all the arguments. The number of arguments provided are: %d", argc);
 		printf("All the required arguments have not provided!\n");
 		printf("First argument: Path including the filename\nSecond argument: String to be written in the file\n");
+                syslog(LOG_USER,"All the required arguments have not provided!\n");
+                syslog(LOG_USER,"First argument: Path including the filename\n");
+		syslog(LOG_USER,"Second argument: String to be written in the file\n");
+
 		exit(1);
 	}
 
@@ -53,7 +57,7 @@ int main(int argc, char *argv[]){
 
 	//If the file could not be opened if it exists or if it could not be created, generate error message and exit with status 1
 	if(fd == -1){
-			syslog(LOG_ERR,"File could not be created\n");
+			syslog(LOG_ERR,"File could not be created. Error: %s\n", strerror(errno));
 			exit(1);
 	}
 
