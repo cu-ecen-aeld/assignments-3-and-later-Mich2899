@@ -1,5 +1,17 @@
-#include "systemcalls.h"
+/** Edited by: Michelle Christian  **/
+#define _XOPEN_SOURCE 											/* if we want WEXITSTATUS, etc. */
 
+#include <stdio.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <syslog.h>
+#include <string.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include "systemcalls.h"
 /**
  * @param cmd the command to execute with system()
  * @return true if the commands in ... with arguments @param arguments were executed 
@@ -12,12 +24,20 @@ bool do_system(const char *cmd)
 
 /*
  * TODO  add your code here
- *  Call the system() function with the command set in the dmd
+ *  Call the system() function with the command set in the cmd
  *   and return a boolean true if the system() call completed with success 
  *   or false() if it returned a failure
+ *
+ *
 */
-
-    return true;
+    
+   bool result = false;							//boolean to return if the system() function passes/ fails
+   int status;								//status gives the return value of the function
+   status=system(cmd);					
+   	if(status == 0){						//Only if the return value is 0 the system() call has completed with success hence return true
+		result = true;
+	}
+    return result;
 }
 
 /**
@@ -58,10 +78,42 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *   
 */
+    int status;								//status is passed into the waitpid function to get the staus of wait function
+    pid_t pid;								//stores the return value of fork function
+
+    //fork
+    pid = fork();
+
+
+    if(pid == -1)							//if the fork function returns -1 meaning the child process could not be created
+	    return -1;
+
+    else if (pid ==0){							//if the fork function returms 0 meaning the child process has successfully been created
+
+	 //execv
+	execv(command[0],command);					//call execv, pass first argument as command[0] and rest of the arguments as second parameter
+									//command is passed because it will take the first paramter as filename and take rest of the arguments as input
+	exit(-1);							//if execv fails exit from child process with status -1
+    }
+
+    //wait
+    if(waitpid(pid, &status, 0) == -1){					//wait for the process to see if it executes successfully
+	    return -1;							//if not return with status -1
+    }
+
+    else if (WIFEXITED(status)){					//check the status using WIFEXITED
+	    if(WEXITSTATUS(status) == 0){				//if the status is zero meaning the process has been executed successfully
+	    	return true;
+	    }
+	    else{							//else return false
+	    	return false;
+	    }
+    }
 
     va_end(args);
 
     return true;
+
 }
 
 /**
@@ -92,6 +144,39 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *   
 */
+    int pid;								//pid to store the return value of fork
+    int status;								//check the status for waitpid
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);		//open the outputfile for writinf the path in 
+    if (fd < 0){perror("open");exit(-1);}				//return error if could not open the file and exit with status -1
+
+    //fork
+    pid = fork();							
+    if(pid == -1){perror("fork"); exit(-1);}				//return error if child process not created and exit with status -1
+
+    else if(pid ==  0){							
+		if(dup2(fd,1)<0) {perror("dup2"); exit(-1);}		//redirect the file path to outputfile
+		close(fd);						//close the file
+
+	         //execv
+        	execv(command[0],command);				//call execv, pass first argument as command[0] and rest of the arguments as second parameter
+									//command is passed because it will take the first paramter as filename and take rest of the arguments as input
+
+        	exit(-1);
+     }
+     else{close(fd);}							//close the file if none of the conditions satisfied
+
+   //wait
+    if(waitpid(pid, &status, 0) == -1){					//wait for the process to see if it executes successfully
+            return -1; 							//if not return with status -
+    }   
+    else if (WIFEXITED(status)){					//check the status using WIFEXITED
+            if(WEXITSTATUS(status) == 0){ 				//if the status is zero meaning the process has been executed successfully
+                return true;
+            }
+            else{
+                return false;						//else return false
+            }
+    }   
 
     va_end(args);
     
