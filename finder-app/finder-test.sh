@@ -53,10 +53,10 @@ done
 
 OUTPUTSTRING=$(finder.sh "$WRITEDIR" "$WRITESTR")
 
+writer "$ASSIGN" "${OUTPUTSTRING} | grep ${MATCHSTR}"
+
 set +e
 echo ${OUTPUTSTRING} | grep "${MATCHSTR}"
-
-echo ${OUTPUTSTRING} > ${ASSIGN}
 
 if [ $? -eq 0 ]; then
 	echo "success"
