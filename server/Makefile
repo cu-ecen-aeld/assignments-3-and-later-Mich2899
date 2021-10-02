@@ -1,15 +1,16 @@
 CROSS_COMPILE=
 CC=$(CROSS_COMPILE)gcc
+CFLAGS= -Wall -Werror
 
 all:	aesdsocket
 
 default:	aesdsocket
 
-writer.o:       aesdsocket.c
-	$(CC) -c aesdsocket.c
+aesdsocket.o:       aesdsocket.c
+	$(CC) $(CFLAGS) -c aesdsocket.c
 
-writer: aesdsocket.o
-	$(CC) aesdsocket.o -o aesdsocket
+aesdsocket: aesdsocket.o
+	$(CC) $(CFLAGS)  aesdsocket.o -o aesdsocket
 
 clean:
 	-rm -f *.o aesdsocket
