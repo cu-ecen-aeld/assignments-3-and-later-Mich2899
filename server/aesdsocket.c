@@ -18,7 +18,7 @@ int storefd, acceptfd;
 
 void sig_handler(int signo)
 {
-  if (signo == SIGINT || signo == SIGTERM){
+  if ((signo == SIGINT) || (signo == SIGTERM)){
     printf("Caught signal, exiting\n");
     remove("/var/tmp/aesdsocketdata");
     close(acceptfd);
@@ -29,14 +29,14 @@ void sig_handler(int signo)
 
 int main(void){
 
-	int status, socketfd, bindret, listenret, recvret, writeret, readret, sendret, flag=0;
+	int status, socketfd, bindret, listenret, recvret, writeret, readret, sendret;
 	struct addrinfo hints;
 	struct addrinfo *res;
 	struct sockaddr_in connection_addr;
 	socklen_t addr_size;
-//	char buf[MAXSIZE], buf2[MAXSIZE];
-	char* buf; char* buf2;
+	char* buf; char* buf2; char* buf3; char* newline;
 	off_t ret;
+	size_t buf2_size=0;
 
 	buf = (char*)malloc(100*sizeof(char));
 	buf2 = (char*)malloc(100*sizeof(char));
@@ -81,69 +81,66 @@ int main(void){
         addr_size = sizeof connection_addr;
 
 	while(1){
-		//accept for a connection
-		acceptfd = accept(socketfd, (struct sockaddr*)&connection_addr, &addr_size);
-		if(acceptfd == -1){
-		    syslog(LOG_ERR, "error: accept!! errno:%s", strerror(errno));
-		    return -1;
-		}
-	
-		syslog(LOG_INFO,"Accepted connection from %d", acceptfd);
+		
+                //accept for a connection
+                acceptfd = accept(socketfd, (struct sockaddr*)&connection_addr, &addr_size);
+                if(acceptfd == -1){
+                    syslog(LOG_ERR, "error: accept!! errno:%s", strerror(errno));
+                    return -1;
+                }
 
-		//recieve data
-			
-	        storefd = open("/var/tmp/aesdsocketdata", O_CREAT | O_APPEND | O_RDWR, 0666);
-	        if(storefd == -1){
-	            syslog(LOG_ERR, "error: file open/creation error!! errno:%s", strerror(errno));
-	            return -1;
-	        }
-	
-		//add while for receieving longer files
-		while(flag == 0){
-			recvret = recv(acceptfd, buf, MAXSIZE-1, 0);
-			if(recvret == 0){
-				syslog(LOG_ERR, "Connection_lost");
-				return -1;
-			}
-			else if(recvret == -1){
-				if(errno == EAGAIN){
-					syslog(LOG_ERR, "Please reallocate space!!");
+                syslog(LOG_INFO,"Accepted connection from %d", acceptfd);
+
+  		
+		//open file
+                storefd = open("/var/tmp/aesdsocketdata", O_CREAT | O_APPEND | O_RDWR, 0666);
+                if(storefd == -1){
+                    syslog(LOG_ERR, "error: file open/creation error!! errno:%s", strerror(errno));
+                    return -1;
+                }	
+		
+		do{
+				recvret = recv(acceptfd, buf, MAXSIZE-1, 0);
+				if(recvret == -1){
+					syslog(LOG_ERR, "errno: %s", strerror(errno));
 				}
-				syslog(LOG_ERR, "errno: %s", strerror(errno));
-			}
-			else{
-				strcpy(buf2, buf);				
-				flag = 1;
-			}
-		}
-		flag = 0;	
+				else{
+					buf2_size+=recvret;
+					if(sizeof(buf2)<buf2_size){
+						buf2 = (char*)realloc(buf2, buf2_size);
+					}
+					strncpy(buf2, buf, recvret);
+				}
+				newline = strchr(buf, '\n');
+		}while(newline == NULL);
 
-		writeret = write(storefd, buf, recvret);
-		if(writeret == -1){
-			syslog(LOG_ERR, "Write error!!");
-		}
+		//write into the file
+                writeret = write(storefd, buf2, buf2_size);
+                       if(writeret == -1){
+                                syslog(LOG_ERR, "Write error!!");
+                       }
 
 
-			ret = lseek(storefd, 0, SEEK_SET);
+		//read from the file and send
+		ret = lseek(storefd, 0, SEEK_SET);
 			if(ret == (off_t) -1){
 				syslog(LOG_ERR, "lseek error!!");
 			}
 
+			
+		buf3 = (char*)malloc(buf2_size);
 
-			readret = read(storefd, buf2, MAXSIZE);
+		readret = read(storefd, buf3, buf2_size);
 			if(readret == -1){
 				syslog(LOG_ERR,"read error!!");
 			}	
-			printf("readret:%d buf2:%s\n",readret, buf2);
-
-
-			sendret = send(acceptfd, buf2, readret, 0);
+	
+	
+		sendret = send(acceptfd, buf3, readret, 0);
 			if(sendret == -1){
 				syslog(LOG_ERR,"send error!!");
 			}
 	   	
-//	     close(acceptfd);
-//	     close(storefd);
 
 	      if (signal(SIGINT, sig_handler) == SIG_ERR)
 		  printf("\ncan't catch SIGINT\n");
