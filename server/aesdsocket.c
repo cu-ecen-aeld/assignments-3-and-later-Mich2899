@@ -34,12 +34,12 @@ int main(void){
 	struct addrinfo *res;
 	struct sockaddr_in connection_addr;
 	socklen_t addr_size;
-	char* buf; char* buf2; char* buf3; char* newline;
+	char buf[MAXSIZE];
+	char* buf3; char* newline;
 	off_t ret;
 	size_t buf2_size=0;
 
-	buf = (char*)malloc(100*sizeof(char));
-	buf2 = (char*)malloc(100*sizeof(char));
+	char *buf2 = (char*)malloc(sizeof(char));	
 
 	openlog(NULL,0,LOG_USER);
 	memset(&hints, 0, sizeof(hints)); 		//make sure the struct is empty
@@ -99,6 +99,7 @@ int main(void){
                     return -1;
                 }	
 		
+	        memset(buf, 0, MAXSIZE);
 		do{
 				recvret = recv(acceptfd, buf, MAXSIZE-1, 0);
 				if(recvret == -1){
@@ -106,8 +107,8 @@ int main(void){
 				}
 				else{
 					buf2_size+=recvret;
-					if(sizeof(buf2)<buf2_size){
-						buf2 = (char*)realloc(buf2, buf2_size);
+					if(sizeof(buf2)<recvret){
+						buf2 = (char*)malloc(recvret);
 					}
 					strncpy(buf2, buf, recvret);
 				}
