@@ -1,3 +1,10 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//	File:		aesdsocket.c							       //
+//	Author:		Michelle Christian						       //
+//	ECEN 5713 AESD Assignment 5 part 1						       //
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+/*********************************************INCLUDES******************************************/
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -13,21 +20,30 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 
+/*******************************************DEFINES*********************************************/
 #define MAXSIZE 100
-#define MYPORT "9000"  // the port users will be connecting to
-#define BACKLOG 10     // how many pending connections queue will hold
+#define MYPORT "9000"  			// the port users will be connecting to
+#define BACKLOG 10     			// how many pending connections queue will hold
 
-int storefd, acceptfd, socketfd;
+/***************************************GLOBAL VARIABLE*****************************************/
 
+int storefd, acceptfd, socketfd;	//aesdsocketdata file fd, client fd, server socket fd
+
+//signal handler to handle SIGTERM and SIGINT signals
 void sig_handler(int signo)
 {
   if ((signo == SIGINT) || (signo == SIGTERM)){
     printf("Caught signal, exiting\n");
-    remove("/var/tmp/aesdsocketdata");
+   
+    close(storefd);						//close the file
+    close(socketfd);						//close the server socket
+    closelog();							//close log
 
-    close(storefd);
-    close(socketfd);
-    closelog();
+    if(remove("/var/tmp/aesdsocketdata") == -1)                 //delete the file
+    {   
+        syslog(LOG_ERR,"file delete error!!");
+    }
+    
     exit(EXIT_SUCCESS);
   }
 }
@@ -49,20 +65,20 @@ int main(int argc, char *argv[]){
 	pid_t pid; 
 
 	if(argc == 1){
-		daemon = false;
+		daemon = false;							//not running in daemon mode
 	}
 
-	else if(argc >2){
+	else if(argc >2){							//more than required arguments
 		syslog(LOG_ERR,"Please provide appropriate arguments!!");	
 		return -1;
 	}
 
-	else if(argc == 2){
+	else if(argc == 2){							//if daemon argument provided
 		if(strcmp(argv[1],"-d")==0)
 			daemon = true;
 	}
 
-        if (signal(SIGINT, sig_handler) == SIG_ERR)
+        if (signal(SIGINT, sig_handler) == SIG_ERR)				//call signal handler for SIGINT SIGTERM
               syslog(LOG_ERR,"\ncan't catch SIGINT\n");
         else if (signal(SIGTERM, sig_handler) == SIG_ERR)
               syslog(LOG_ERR,"\ncan't catch SIGINT\n");
@@ -107,7 +123,7 @@ int main(int argc, char *argv[]){
 	freeaddrinfo(res);
 	
 	
-	        // Forcefully attaching socket to the port
+        // Forcefully attaching socket to the port
         if(setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
                                                   &opt, sizeof(opt)))
         {
@@ -115,6 +131,7 @@ int main(int argc, char *argv[]){
                 exit(EXIT_FAILURE);
         }
 
+	//if daemon argument provided fork the process
         if(daemon){
                 syslog(LOG_INFO, "Running in daemon mode!!");
 
@@ -165,12 +182,14 @@ int main(int argc, char *argv[]){
 
                 syslog(LOG_INFO,"Accepted connection from %d", acceptfd);
 		
+		//clear the buffer for input
 	        memset(buf, '\0', sizeof(buf));
 		char* buf2 = (char*)malloc(MAXSIZE*sizeof(char));
 		int mallocsize = MAXSIZE;
 		char* newptr = NULL;
 
 		do{
+				//receive the bytes
 				recvret = recv(acceptfd, buf, sizeof(buf), 0);
 				if(recvret == -1){
 					syslog(LOG_ERR, "errno: %s", strerror(errno));
@@ -178,17 +197,17 @@ int main(int argc, char *argv[]){
 				else{
 					if((mallocsize-buf2_size) < recvret){
 						mallocsize += recvret;
-						newptr = (char*)realloc(buf2, mallocsize* sizeof(char));
+						newptr = (char*)realloc(buf2, mallocsize* sizeof(char)); //realloc if the recived bytes are more than the size of buffer
 						if(newptr!=NULL){
 							buf2 = newptr;
 						}
 					}
-					memcpy(&buf2[buf2_size], buf, recvret);
+					memcpy(&buf2[buf2_size], buf, recvret);				//copy contents to another buffer so later can append bigger data files
 				}
 
 			buf2_size+=recvret;
-			newline = strchr(buf, '\n');
-		}while(newline == NULL);
+			newline = strchr(buf, '\n');	//check for newline character
+		}while(newline == NULL); 
 
 		//write into the file
                 writeret = write(storefd, buf2, buf2_size);
@@ -207,28 +226,35 @@ int main(int argc, char *argv[]){
 		sendsize+=buf2_size;	
 		buf3 = (char*)malloc(sendsize*sizeof(char));
 
+		//read from /var/tmp/aesdsocketdata
 		readret = read(storefd, buf3, sendsize);
 			if(readret == -1){
 				syslog(LOG_ERR,"read error!!");
 			}	
 	
-	
+		//send data
 		sendret = send(acceptfd, buf3, sendsize, 0);
 			if(sendret == -1){
 				syslog(LOG_ERR,"send error!!");
 			}
+
+	   //free the malloced buffers to avoid memory leak	
 	   free(buf2);
    	   free(buf3);	   
 
+	   //close the client fd
 	   close(acceptfd);
 	   syslog(LOG_INFO, "Closed connection from %d", acceptfd);
 
+	   //reinitialize the variables for new line input
 	      buf2_size =0;
 	      recvret=0;
 	      readret=0;
 	}
 
+	//close the file 
 	close(storefd);
+	close(socketfd);
 
 	closelog();
 
