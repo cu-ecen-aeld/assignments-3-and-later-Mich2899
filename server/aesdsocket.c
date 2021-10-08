@@ -12,6 +12,8 @@
 #include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -27,7 +29,7 @@
 
 /***************************************GLOBAL VARIABLE*****************************************/
 
-int storefd, acceptfd, socketfd;	//aesdsocketdata file fd, client fd, server socket fd
+int storefd, acceptfd, socketfd, signalflag=0;	//aesdsocketdata file fd, client fd, server socket fd
 
 //signal handler to handle SIGTERM and SIGINT signals
 void sig_handler(int signo)
@@ -35,16 +37,16 @@ void sig_handler(int signo)
   if ((signo == SIGINT) || (signo == SIGTERM)){
     printf("Caught signal, exiting\n");
    
-    close(storefd);						//close the file
-    close(socketfd);						//close the server socket
-    closelog();							//close log
-
-    if(remove("/var/tmp/aesdsocketdata") == -1)                 //delete the file
-    {   
-        syslog(LOG_ERR,"file delete error!!");
+    if(shutdown(acceptfd, SHUT_RDWR) == -1){
+    	syslog(LOG_ERR, "Client Shutdown error!!");
     }
-    
-    exit(EXIT_SUCCESS);
+
+    if(shutdown(socketfd, SHUT_RDWR) == -1){
+        syslog(LOG_ERR, "Client Shutdown error!!");
+    }
+
+	signalflag=1;
+
   }
 }
 
@@ -56,6 +58,8 @@ int main(int argc, char *argv[]){
 	struct addrinfo *res;
 	struct sockaddr_in connection_addr;
 	socklen_t addr_size;
+	sigset_t set1, set2;
+	int rc;
 	char buf[MAXSIZE];
 	char* buf3; char* newline; 
 	off_t ret;
@@ -64,6 +68,15 @@ int main(int argc, char *argv[]){
         bool daemon = false;	
 	pid_t pid; 
 
+	openlog(NULL,0,LOG_USER);
+	
+	        if (signal(SIGINT, sig_handler) == SIG_ERR)				//call signal handler for SIGINT SIGTERM
+              syslog(LOG_ERR,"\ncan't catch SIGINT\n");
+        else if (signal(SIGTERM, sig_handler) == SIG_ERR)
+              syslog(LOG_ERR,"\ncan't catch SIGINT\n");
+
+
+	
 	if(argc == 1){
 		daemon = false;							//not running in daemon mode
 	}
@@ -78,13 +91,7 @@ int main(int argc, char *argv[]){
 			daemon = true;
 	}
 
-        if (signal(SIGINT, sig_handler) == SIG_ERR)				//call signal handler for SIGINT SIGTERM
-              syslog(LOG_ERR,"\ncan't catch SIGINT\n");
-        else if (signal(SIGTERM, sig_handler) == SIG_ERR)
-              syslog(LOG_ERR,"\ncan't catch SIGINT\n");
 
-
-	openlog(NULL,0,LOG_USER);
 	memset(&hints, 0, sizeof(hints)); 		//make sure the struct is empty
 	hints.ai_family 	= AF_INET;		//IPV4/IPV6
 	hints.ai_socktype 	= SOCK_STREAM;		//TCP stream sockets
@@ -131,6 +138,24 @@ int main(int argc, char *argv[]){
                 exit(EXIT_FAILURE);
         }
 
+ 	//listen for a connection
+	listenret = listen(socketfd, BACKLOG);
+	if(listenret == -1){
+	    syslog(LOG_ERR, "error: listen!! errno: %s", strerror(errno));
+	    return -1;
+	}
+
+        //open file
+        storefd = open("/var/tmp/aesdsocketdata", O_CREAT | O_APPEND | O_RDWR, 0666);
+        if(storefd == -1){
+               syslog(LOG_ERR, "error: file open/creation error!! errno:%s", strerror(errno));
+               return -1;
+         }
+         
+       sigemptyset(&set1);
+	sigaddset(&set1, SIGINT);
+	sigaddset(&set1, SIGTERM);
+ 	
 	//if daemon argument provided fork the process
         if(daemon){
                 syslog(LOG_INFO, "Running in daemon mode!!");
@@ -153,40 +178,35 @@ int main(int argc, char *argv[]){
                 dup (0); /* stderror */
         }
 
-	//listen for a connection
-	listenret = listen(socketfd, BACKLOG);
-	if(listenret == -1){
-	    syslog(LOG_ERR, "error: listen!! errno: %s", strerror(errno));
-	    return -1;
-	}
-
-        //open file
-        storefd = open("/var/tmp/aesdsocketdata", O_CREAT | O_APPEND | O_RDWR, 0666);
-        if(storefd == -1){
-               syslog(LOG_ERR, "error: file open/creation error!! errno:%s", strerror(errno));
-               return -1;
-         }
-
 
 
        addr_size = sizeof connection_addr;
 
-	while(1){
+	while(!signalflag){
 		
                 //accept for a connection
                 acceptfd = accept(socketfd, (struct sockaddr*)&connection_addr, &addr_size);
+                
+                if(signalflag)
+                	break;
+                	
                 if(acceptfd == -1){
                     syslog(LOG_ERR, "error: accept!! errno:%s", strerror(errno));
                     return -1;
                 }
-
-                syslog(LOG_INFO,"Accepted connection from %d", acceptfd);
+                
+		char *IP = inet_ntoa(connection_addr.sin_addr);
+		syslog(LOG_DEBUG, "Accepted connection from %s\n", IP);
 		
 		//clear the buffer for input
 	        memset(buf, '\0', sizeof(buf));
 		char* buf2 = (char*)malloc(MAXSIZE*sizeof(char));
 		int mallocsize = MAXSIZE;
 		char* newptr = NULL;
+		
+		if((rc = sigprocmask(SIG_BLOCK, &set1, &set2)) == -1)
+			printf("sigprocmask failed\n");
+
 
 		do{
 				//receive the bytes
@@ -208,6 +228,9 @@ int main(int argc, char *argv[]){
 			buf2_size+=recvret;
 			newline = strchr(buf, '\n');	//check for newline character
 		}while(newline == NULL); 
+
+		if((rc = sigprocmask(SIG_UNBLOCK, &set2, NULL)) == -1)
+			printf("sigprocmask failed\n");
 
 		//write into the file
                 writeret = write(storefd, buf2, buf2_size);
@@ -231,20 +254,24 @@ int main(int argc, char *argv[]){
 			if(readret == -1){
 				syslog(LOG_ERR,"read error!!");
 			}	
+			
+		if((rc = sigprocmask(SIG_BLOCK, &set1, &set2)) == -1)
+				printf("sigprocmask failed\n");
+	
 	
 		//send data
 		sendret = send(acceptfd, buf3, sendsize, 0);
 			if(sendret == -1){
 				syslog(LOG_ERR,"send error!!");
 			}
+			
+			if((rc = sigprocmask(SIG_UNBLOCK, &set2, NULL)) == -1)
+				printf("sigprocmask failed\n");
+
 
 	   //free the malloced buffers to avoid memory leak	
 	   free(buf2);
    	   free(buf3);	   
-
-	   //close the client fd
-	   close(acceptfd);
-	   syslog(LOG_INFO, "Closed connection from %d", acceptfd);
 
 	   //reinitialize the variables for new line input
 	      buf2_size =0;
@@ -254,9 +281,14 @@ int main(int argc, char *argv[]){
 
 	//close the file 
 	close(storefd);
+	close(acceptfd);
 	close(socketfd);
-
 	closelog();
+	
+	    if(remove("/var/tmp/aesdsocketdata") == -1)                 //delete the file
+    	    {   
+        	syslog(LOG_ERR,"file delete error!!");
+    	    }    
 
 	return 0;
 }
