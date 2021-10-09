@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//	File:		aesdsocket.c							       //
-//	Author:		Michelle Christian						       //
-//	ECEN 5713 AESD Assignment 5 part 1						       //
+//	File:		aesdsocket.c							       								   //
+//	Author:		Michelle Christian						       								   //
+//	ECEN 5713 AESD Assignment 5 part 1						       							   //
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*********************************************INCLUDES******************************************/
@@ -49,15 +49,15 @@ void sig_handler(int signo)
 
 int main(int argc, char *argv[]){
 
-	int status, bindret, listenret, recvret, writeret, readret, sendret;
-	int sendsize=0;
-	struct addrinfo hints;
+	int status, bindret, listenret, recvret, writeret, readret, sendret;		//return values for respective functions
+	int sendsize=0;																//size of each line to be sent
+	struct addrinfo hints;															
 	struct addrinfo *res;
 	struct sockaddr_in connection_addr;
 	socklen_t addr_size;
-	char buf[MAXSIZE];
-	char* buf3; char* newline; char* newline2;
-	off_t ret;
+	char buf[MAXSIZE];														    //static buffer to recieve the data into
+	char* buf3; char* newline; char* newline2;									//buffer to read data from file and buffers to check newline characters
+	off_t ret;																	
 	size_t buf2_size=0;
 	int opt=1;
         bool daemon = false;	
@@ -191,15 +191,17 @@ int main(int argc, char *argv[]){
 		
 		//clear the buffer for input
 	        memset(buf, '\0', sizeof(buf));
+
+		//buffer to read all the values in and realloc if required
 		char* buf2 = (char*)malloc(MAXSIZE*sizeof(char));
 		if(buf2 == NULL){
 			syslog(LOG_ERR, "read buffer malloc failed!!");
 			break;
 		}
 
-		int mallocsize = MAXSIZE, reallocsize = MAXSIZE;
-		char* newptr = NULL;
-		int setback=0, pos=0;
+		int mallocsize = MAXSIZE, reallocsize = MAXSIZE;		//realloc sizes for read and write buffer
+		char* newptr = NULL; char* newptr2 =NULL;				//newptr checks the realloc return 
+		int setback=0, pos=0, end_of_file=0, nextsize=0;
 		
 		do{
 				//receive the bytes
@@ -230,14 +232,14 @@ int main(int argc, char *argv[]){
                        }
 
 
-		pos = lseek(storefd, 0, SEEK_CUR);
+		end_of_file = lseek(storefd, 0, SEEK_END);
                 ret = lseek(storefd, 0, SEEK_SET);
                         if(ret == (off_t) -1){
                                 syslog(LOG_ERR, "lseek error!!");
                         }
 
 
-		while(setback!= pos){
+		while(setback!= end_of_file){
 			sendsize=0;
 			
 			buf3 = (char*)malloc(MAXSIZE*sizeof(char));
@@ -249,6 +251,9 @@ int main(int argc, char *argv[]){
 	                //clear the buffer for input
         	        memset(buf3, '\0', MAXSIZE);
 
+			//nextsize calculates the size of the next line so that we just have to realloc that much
+			nextsize = end_of_file - pos;
+
 			do{
 			
 		               readret = read(storefd, buf3+sendsize, sizeof(char));
@@ -256,16 +261,20 @@ int main(int argc, char *argv[]){
 	                                syslog(LOG_ERR,"read error!!");
 	                        }       
                         	
-				if(reallocsize - sendsize < pos)
+				if(reallocsize - sendsize < end_of_file)
 				{
-					reallocsize += pos;
-					buf3 = (char*)realloc(buf3, reallocsize*sizeof(char));
+					reallocsize += nextsize ;
+					newptr2 = (char*)realloc(buf3, reallocsize*sizeof(char));
+					if(newptr2 != NULL){
+						buf3 =newptr2;
+					}
 				}
 
 				sendsize += readret;
 				newline2 = strchr(buf, '\n');    //check for newline character
 			}while(newline2==NULL);
-
+		
+			pos = lseek(storefd, 0, SEEK_CUR);
 			setback+=sendsize;
 			
 			//send data
@@ -285,7 +294,7 @@ int main(int argc, char *argv[]){
  	   close(acceptfd);	
    	   syslog(LOG_INFO,"Closed connection from %s",IP);	   
 
-	   //reinitialize the variables for new line input
+	   //reinitialize the variables for new line input from recv
 	      buf2_size =0;
 	      recvret=0;
 	      readret=0;
