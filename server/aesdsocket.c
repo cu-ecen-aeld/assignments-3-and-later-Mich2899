@@ -56,7 +56,7 @@ int main(int argc, char *argv[]){
 	struct sockaddr_in connection_addr;
 	socklen_t addr_size;
 	char buf[MAXSIZE];
-	char* buf3; char* newline; 
+	char* buf3; char* newline; char* newline2;
 	off_t ret;
 	size_t buf2_size=0;
 	int opt=1;
@@ -263,8 +263,8 @@ int main(int argc, char *argv[]){
 				}
 
 				sendsize += readret;
- 
-			}while(newline==NULL);
+				newline2 = strchr(buf, '\n');    //check for newline character
+			}while(newline2==NULL);
 
 			setback+=sendsize;
 			
