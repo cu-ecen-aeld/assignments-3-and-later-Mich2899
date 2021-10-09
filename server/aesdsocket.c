@@ -55,8 +55,6 @@ int main(int argc, char *argv[]){
 	struct addrinfo *res;
 	struct sockaddr_in connection_addr;
 	socklen_t addr_size;
-	sigset_t set1, set2;
-	int rc;
 	char buf[MAXSIZE];
 	char* buf3; char* newline; 
 	off_t ret;
@@ -148,11 +146,7 @@ int main(int argc, char *argv[]){
                syslog(LOG_ERR, "error: file open/creation error!! errno:%s", strerror(errno));
                return -1;
          }
-         
-       sigemptyset(&set1);
-	sigaddset(&set1, SIGINT);
-	sigaddset(&set1, SIGTERM);
- 	
+         	
 	//if daemon argument provided fork the process
         if(daemon){
                 syslog(LOG_INFO, "Running in daemon mode!!");
@@ -198,14 +192,15 @@ int main(int argc, char *argv[]){
 		//clear the buffer for input
 	        memset(buf, '\0', sizeof(buf));
 		char* buf2 = (char*)malloc(MAXSIZE*sizeof(char));
-		int mallocsize = MAXSIZE;
+		if(buf2 == NULL){
+			syslog(LOG_ERR, "read buffer malloc failed!!");
+			break;
+		}
+
+		int mallocsize = MAXSIZE, reallocsize = MAXSIZE;
 		char* newptr = NULL;
-		//int setback=0, pos=0;
+		int setback=0, pos=0;
 		
-		if((rc = sigprocmask(SIG_BLOCK, &set1, &set2)) == -1)
-			printf("sigprocmask failed\n");
-
-
 		do{
 				//receive the bytes
 				recvret = recv(acceptfd, buf, sizeof(buf), 0);
@@ -227,8 +222,6 @@ int main(int argc, char *argv[]){
 			newline = strchr(buf, '\n');	//check for newline character
 		}while(newline == NULL); 
 
-		if((rc = sigprocmask(SIG_UNBLOCK, &set2, NULL)) == -1)
-			printf("sigprocmask failed\n");
 
 		//write into the file
                 writeret = write(storefd, buf2, buf2_size);
@@ -237,50 +230,73 @@ int main(int argc, char *argv[]){
                        }
 
 
-		//read from the file and send
-		ret = lseek(storefd, 0, SEEK_SET);
-			if(ret == (off_t) -1){
-				syslog(LOG_ERR, "lseek error!!");
+		pos = lseek(storefd, 0, SEEK_CUR);
+                ret = lseek(storefd, 0, SEEK_SET);
+                        if(ret == (off_t) -1){
+                                syslog(LOG_ERR, "lseek error!!");
+                        }
+
+
+		while(setback!= pos){
+			sendsize=0;
+			
+			buf3 = (char*)malloc(MAXSIZE*sizeof(char));
+			if(buf3 == NULL){
+				syslog(LOG_ERR,"writebuffer malloc failed!!");
+				break;
 			}
 
-		
-		sendsize+=buf2_size;	
-		buf3 = (char*)malloc(sendsize*sizeof(char));
-		
-		//read from /var/tmp/aesdsocketdata
-		readret = read(storefd, buf3, sendsize);
-			if(readret == -1){
-				syslog(LOG_ERR,"read error!!");
-			}	
-			
-		if((rc = sigprocmask(SIG_BLOCK, &set1, &set2)) == -1)
-				printf("sigprocmask failed\n");
-	
-	
-		//send data
-		sendret = send(acceptfd, buf3, sendsize, 0);
-			if(sendret == -1){
-				syslog(LOG_ERR,"send error!!");
-			}
-			
-			if((rc = sigprocmask(SIG_UNBLOCK, &set2, NULL)) == -1)
-				printf("sigprocmask failed\n");
+	                //clear the buffer for input
+        	        memset(buf3, '\0', MAXSIZE);
 
+			do{
+			
+		               readret = read(storefd, buf3+sendsize, sizeof(char));
+	                        if(readret == -1){
+	                                syslog(LOG_ERR,"read error!!");
+	                        }       
+                        	
+				if(reallocsize - sendsize < pos)
+				{
+					reallocsize += pos;
+					buf3 = (char*)realloc(buf3, reallocsize*sizeof(char));
+				}
+
+				sendsize += readret;
+ 
+			}while(newline==NULL);
+
+			setback+=sendsize;
+			
+			//send data
+           		sendret = send(acceptfd, buf3, sendsize, 0);
+                        if(sendret == -1){
+                                syslog(LOG_ERR,"send error!!");
+                        }
+	
+     
+			free(buf3);
+  
+
+		}
 
 	   //free the malloced buffers to avoid memory leak	
 	   free(buf2);
-   	   free(buf3);	   
+ 	   close(acceptfd);	
+   	   syslog(LOG_INFO,"Closed connection from %s",IP);	   
 
 	   //reinitialize the variables for new line input
 	      buf2_size =0;
 	      recvret=0;
 	      readret=0;
+	      setback=0;
+	      pos=0;
 	}
 
 	//close the file 
 	close(storefd);
-	close(acceptfd);
 	close(socketfd);
+	close(acceptfd);
 	closelog();
 	
 	    if(remove("/var/tmp/aesdsocketdata") == -1)                 //delete the file
