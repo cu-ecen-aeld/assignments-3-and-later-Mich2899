@@ -36,12 +36,9 @@ void sig_handler(int signo)
 {
   if ((signo == SIGINT) || (signo == SIGTERM)){
     printf("Caught signal, exiting\n");
-   
-    if(shutdown(acceptfd, SHUT_RDWR) == -1){
-    	syslog(LOG_ERR, "Client Shutdown error!!");
-    }
 
     if(shutdown(socketfd, SHUT_RDWR) == -1){
+	perror("Shutdown error!!");
         syslog(LOG_ERR, "Client Shutdown error!!");
     }
 
@@ -203,6 +200,7 @@ int main(int argc, char *argv[]){
 		char* buf2 = (char*)malloc(MAXSIZE*sizeof(char));
 		int mallocsize = MAXSIZE;
 		char* newptr = NULL;
+		//int setback=0, pos=0;
 		
 		if((rc = sigprocmask(SIG_BLOCK, &set1, &set2)) == -1)
 			printf("sigprocmask failed\n");
@@ -248,7 +246,7 @@ int main(int argc, char *argv[]){
 		
 		sendsize+=buf2_size;	
 		buf3 = (char*)malloc(sendsize*sizeof(char));
-
+		
 		//read from /var/tmp/aesdsocketdata
 		readret = read(storefd, buf3, sendsize);
 			if(readret == -1){
