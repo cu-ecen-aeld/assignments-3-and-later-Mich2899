@@ -271,7 +271,10 @@ int main(int argc, char *argv[]){
 				}
 
 				sendsize += readret;
-				newline2 = strchr(buf, '\n');    //check for newline character
+
+				if(sendsize>1){
+				newline2 = strchr(buf3, '\n');    //check for newline character
+				}
 			}while(newline2==NULL);
 		
 			pos = lseek(storefd, 0, SEEK_CUR);
