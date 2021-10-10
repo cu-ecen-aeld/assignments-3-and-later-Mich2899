@@ -8,7 +8,7 @@ all:	aesdsocket
 default:	aesdsocket
 
 aesdsocket.o:       aesdsocket.c
-	$(CC) $(CFLAGS) -c aesdsocket.c queue.h $(LIBS)
+	$(CC) $(CFLAGS) -c aesdsocket.c $(LIBS)
 
 aesdsocket: aesdsocket.o
 	$(CC) $(CFLAGS)  aesdsocket.o -o aesdsocket $(LIBS)

@@ -23,7 +23,7 @@
 #include <sys/stat.h>
 #include <pthread.h>
 #include <time.h>
-#include "queue.h"
+#include <sys/queue.h>
 
 /*******************************************DEFINES*********************************************/
 #define MAXSIZE 100
@@ -426,8 +426,9 @@ int main(int argc, char *argv[]){
                 dup (0); /* stderror */
         }
 
-	memset(&sev,0,sizeof(struct sigevent));
-	        /**
+	if(daemon == false||pid == 0){
+		memset(&sev,0,sizeof(struct sigevent));
+	    /**
         * Setup a call to timer_thread passing in the td structure as the sigev_value
         * argument
         */
@@ -442,6 +443,7 @@ int main(int argc, char *argv[]){
 		if(!(setup_timer(clock_id, timerid, 10, &start_time))){
 			printf("Timer setup error!!");
 		}
+	}
 
        addr_size = sizeof connection_addr;
 
