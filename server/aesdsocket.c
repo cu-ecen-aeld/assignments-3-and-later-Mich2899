@@ -107,33 +107,45 @@ void timer_thread (union sigval sigval)
 	struct timerthread* timtd = (struct timerthread*) sigval.sival_ptr;
 	time_t rawtime;
 	struct tm *info;
-	char strtime[80];
+	char *strtime;
 	size_t strbyte;
 
 	time(&rawtime);
 
 	info = localtime(&rawtime);
 
+	strtime = (char*)malloc(MAXSIZE*sizeof(char));
+		if(strtime == NULL){
+			return;
+		}
+
 	strbyte = strftime(strtime, 80, "timestamp: %Y %b %a %H %M %S%n", info);
 
 		if(strbyte == 0){
 			perror("strftime failure!!!");
+			free(strtime);
 		}
 
 	if(pthread_mutex_lock(&mutex)!=0){
 		perror("mutex lock error");
 		printf("mutex lock error in time thread");
+		free(strtime);
 	}
 
 	int writeret = write(timtd->storefilefd, strtime, strbyte);
 	if(writeret != strbyte){
 		syslog(LOG_ERR, "Timestamp error!!!");
+		free(strtime);
 	}
 
 	if(pthread_mutex_unlock(&mutex)!=0){
 		perror("mutex unlock error");
 		printf("mutex unlock error in time thread");
+		free(strtime);
 	}	
+
+	free(strtime);
+	pthread_exit(timtd);
 }
 
 //thread functionality that receives, writes, reads and sends one packet 
@@ -142,7 +154,8 @@ void* thread_function(void* thread_param){
 	struct params* param_value = (struct params*) thread_param;
 	int recvret=0, writeret=0, readret=0, sendret=0;
 	char buf[MAXSIZE];														    //static buffer to recieve the data into
-	char* buf3; char* newline; char* newline2;									//buffer to read data from file and buffers to check newline characters
+	char* newline = NULL; char* newline2 =NULL;
+	char* newptr = NULL; char* newptr2 = NULL;
 	size_t buf2_size=0;
 	int sendsize=0;																//size of each line to be sent
 	off_t ret;
@@ -157,11 +170,10 @@ void* thread_function(void* thread_param){
 		char* buf2 = (char*)malloc(MAXSIZE*sizeof(char));
 		if(buf2 == NULL){
 			syslog(LOG_ERR, "read buffer malloc failed!!");
-			goto end;
 		}
 
 		int mallocsize = MAXSIZE, reallocsize = MAXSIZE;		//realloc sizes for read and write buffer
-		char* newptr = NULL; char* newptr2 =NULL;				//newptr checks the realloc return 
+		//char* newptr = NULL; char* newptr2 =NULL;				//newptr checks the realloc return 
 		int setback=0, pos=0, end_of_file=0, nextsize=0;
 		
 		do{
@@ -175,18 +187,15 @@ void* thread_function(void* thread_param){
 					if((mallocsize-buf2_size) < recvret){
 						mallocsize += recvret;
 						newptr = (char*)realloc(buf2, mallocsize* sizeof(char)); //realloc if the recived bytes are more than the size of buffer
-						if(newptr!=NULL){
-							buf2 = newptr;
-						}
-						else{
-							goto end;
+						if(newptr!= NULL){
+							buf2=newptr;
 						}
 					}
 					memcpy(&buf2[buf2_size], buf, recvret);				//copy contents to another buffer so later can append bigger data files
 				}
 
 			buf2_size+=recvret;
-			newline = strchr(buf, '\n');	//check for newline character
+				newline = strchr(buf, '\n');	//check for newline character
 		}while(newline == NULL); 
 
 		pthread_mutex_lock(&mutex);										//lock the write functionality
@@ -209,7 +218,7 @@ void* thread_function(void* thread_param){
 		while(setback!= end_of_file){
 			sendsize=0;
 			
-			buf3 = (char*)malloc(MAXSIZE*sizeof(char));
+			char* buf3 = (char*)malloc(MAXSIZE*sizeof(char));
 			if(buf3 == NULL){
 				syslog(LOG_ERR,"writebuffer malloc failed!!");
 				break;
@@ -233,12 +242,9 @@ void* thread_function(void* thread_param){
 				if(reallocsize - sendsize < end_of_file)
 				{
 					reallocsize += nextsize ;
-					newptr2 = (char*)realloc(buf3, reallocsize*sizeof(char));
+					newptr2 = (char*)realloc(buf3, reallocsize*sizeof(char)); 		//realloc if the recived bytes are more than the size of buffer
 					if(newptr2 != NULL){
-						buf3 =newptr2;
-					}
-					else{
-						goto end;
+						buf3 = newptr2;
 					}
 				}
 
@@ -260,7 +266,7 @@ void* thread_function(void* thread_param){
                         }
 	
      
-end:			free(buf3);
+			free(buf3);
 	}
 	   //free the malloced buffers to avoid memory leak	
 	   free(buf2);
@@ -494,6 +500,7 @@ int main(int argc, char *argv[]){
 	close(socketfd);
 	close(acceptfd);
 	closelog();
+	timer_delete(timerid);
 	
 	//remove the file
 	    if(remove("/var/tmp/aesdsocketdata") == -1)                 //delete the file
