@@ -145,7 +145,6 @@ void timer_thread (union sigval sigval)
 	}	
 
 	free(strtime);
-	pthread_exit(timtd);
 }
 
 //thread functionality that receives, writes, reads and sends one packet 
@@ -181,7 +180,7 @@ void* thread_function(void* thread_param){
 				recvret = recv(param_value->per_thread_acceptfd, buf, sizeof(buf), 0);
 				if(recvret == -1){
 					syslog(LOG_ERR, "errno: %s", strerror(errno));
-					pthread_exit(param_value);
+					return NULL;
 				}
 				else{
 					if((mallocsize-buf2_size) < recvret){
@@ -203,7 +202,7 @@ void* thread_function(void* thread_param){
         writeret = write(storefd, buf2, buf2_size);
             if(writeret == -1){
                 syslog(LOG_ERR, "Write error!!");
-				pthread_exit(param_value);
+				return NULL;
             }
 		pthread_mutex_unlock(&mutex);	
 
@@ -212,7 +211,7 @@ void* thread_function(void* thread_param){
             ret = lseek(storefd, 0, SEEK_SET);
                 if(ret == (off_t) -1){
                     syslog(LOG_ERR, "lseek error!!");
-					pthread_exit(param_value);
+					return NULL;
                 }
 
 		while(setback!= end_of_file){
@@ -235,7 +234,7 @@ void* thread_function(void* thread_param){
 		               readret = read(storefd, buf3+sendsize, sizeof(char));
 	                        if(readret == -1){
 	                                syslog(LOG_ERR,"read error!!");
-									pthread_exit(param_value);
+									return NULL;
 	                        }       
                 pthread_mutex_unlock(&mutex);        							
 
@@ -262,7 +261,7 @@ void* thread_function(void* thread_param){
            		sendret = send(param_value->per_thread_acceptfd, buf3, sendsize, 0);
                         if(sendret == -1){
                                 syslog(LOG_ERR,"send error!!");
-								pthread_exit(param_value);
+								return NULL;
                         }
 	
      
@@ -274,7 +273,7 @@ void* thread_function(void* thread_param){
    	   syslog(LOG_INFO,"Closed connection from %s",IP);	   
 
 		param_value->thread_complete_flag = true;
-		pthread_exit(param_value);
+		return NULL;
 }
 
 //signal handler to handle SIGTERM and SIGINT signals
