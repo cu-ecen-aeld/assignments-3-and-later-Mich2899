@@ -21,6 +21,9 @@
 #include <linux/fs.h>
 #include <stdbool.h>
 #include <sys/stat.h>
+#include <pthread.h>
+#include <time.h>
+#include <sys/queue.h>
 
 /*******************************************DEFINES*********************************************/
 #define MAXSIZE 100
@@ -30,6 +33,248 @@
 /***************************************GLOBAL VARIABLE*****************************************/
 
 int storefd, acceptfd, socketfd, signalflag=0;	//aesdsocketdata file fd, client fd, server socket fd
+pthread_mutex_t mutex;							//mutex to be passed for thread implementation
+int mutex_ret=0;
+struct sockaddr_in connection_addr;
+
+/*************************************LINKED LIST***********************************************/
+//structure to store thread params
+struct params{
+	bool thread_complete_flag;
+	int  per_thread_acceptfd;
+	pthread_t thread;
+	int threadid;
+};
+
+//structure to store timer thread params
+struct timerthread{
+	int storefilefd;
+};
+
+//slist structure that stores thread params and pointer to next thread
+typedef struct slist_data_s slist_data_t;
+struct slist_data_s{
+	struct params value;
+	SLIST_ENTRY(slist_data_s) entries;
+};
+
+/**
+* set @param result with @param ts_1 + @param ts_2
+*/
+static inline void timespec_add( struct timespec *result,
+                        const struct timespec *ts_1, const struct timespec *ts_2)
+{
+    result->tv_sec = ts_1->tv_sec + ts_2->tv_sec;
+    result->tv_nsec = ts_1->tv_nsec + ts_2->tv_nsec;
+    if( result->tv_nsec > 1000000000L ) {
+        result->tv_nsec -= 1000000000L;
+        result->tv_sec ++;
+    }
+}
+
+
+/**
+* Setup the timer at @param timerid (previously created with timer_create) to fire
+* every @param timer_period_ms milliseconds, using @param clock_id as the clock reference.
+* The time now is saved in @param start_time
+* @return true if the timer could be setup successfuly, false otherwise
+*/
+static bool setup_timer( int clock_id,
+                         timer_t timerid, unsigned int timer_period_s,
+                         struct timespec *start_time)
+{
+    bool success = false;
+    if ( clock_gettime(clock_id,start_time) != 0 ) {
+        printf("Error %d (%s) getting clock %d time\n",errno,strerror(errno),clock_id);
+    } else {
+        struct itimerspec itimerspec;
+        itimerspec.it_interval.tv_sec = timer_period_s;
+        itimerspec.it_interval.tv_nsec = 1000000;
+        timespec_add(&itimerspec.it_value,start_time,&itimerspec.it_interval);
+        if( timer_settime(timerid, TIMER_ABSTIME, &itimerspec, NULL ) != 0 ) {
+            printf("Error %d (%s) setting timer\n",errno,strerror(errno));
+        } else {
+            success = true;
+        }
+    }
+    return success;
+}
+
+//timer thread to print timestamps
+void timer_thread (union sigval sigval)
+{
+
+	struct timerthread* timtd = (struct timerthread*) sigval.sival_ptr;
+	time_t rawtime;
+	struct tm *info;
+	char *strtime;
+	size_t strbyte;
+
+	time(&rawtime);
+
+	info = localtime(&rawtime);
+
+	strtime = (char*)malloc(MAXSIZE*sizeof(char));
+		if(strtime == NULL){
+			return;
+		}
+
+	strbyte = strftime(strtime, 80, "timestamp: %Y %b %a %H %M %S%n", info);
+
+		if(strbyte == 0){
+			perror("strftime failure!!!");
+			free(strtime);
+		}
+
+	if(pthread_mutex_lock(&mutex)!=0){
+		perror("mutex lock error");
+		printf("mutex lock error in time thread");
+		free(strtime);
+	}
+
+	int writeret = write(timtd->storefilefd, strtime, strbyte);
+	if(writeret != strbyte){
+		syslog(LOG_ERR, "Timestamp error!!!");
+		free(strtime);
+	}
+
+	if(pthread_mutex_unlock(&mutex)!=0){
+		perror("mutex unlock error");
+		printf("mutex unlock error in time thread");
+		free(strtime);
+	}	
+
+	free(strtime);
+}
+
+//thread functionality that receives, writes, reads and sends one packet 
+void* thread_function(void* thread_param){
+
+	struct params* param_value = (struct params*) thread_param;
+	int recvret=0, writeret=0, readret=0, sendret=0;
+	char buf[MAXSIZE];														    //static buffer to recieve the data into
+	char* newline = NULL; char* newline2 =NULL;
+	char* newptr = NULL; char* newptr2 = NULL;
+	size_t buf2_size=0;
+	int sendsize=0;																//size of each line to be sent
+	off_t ret;
+
+	char *IP = inet_ntoa(connection_addr.sin_addr);
+	syslog(LOG_DEBUG, "Accepted connection from %s\n", IP);
+
+			//clear the buffer for input
+	        memset(buf, '\0', sizeof(buf));
+
+		//buffer to read all the values in and realloc if required
+		char* buf2 = (char*)malloc(MAXSIZE*sizeof(char));
+		if(buf2 == NULL){
+			syslog(LOG_ERR, "read buffer malloc failed!!");
+		}
+
+		int mallocsize = MAXSIZE, reallocsize = MAXSIZE;		//realloc sizes for read and write buffer
+		//char* newptr = NULL; char* newptr2 =NULL;				//newptr checks the realloc return 
+		int setback=0, pos=0, end_of_file=0, nextsize=0;
+		
+		do{
+				//receive the bytes
+				recvret = recv(param_value->per_thread_acceptfd, buf, sizeof(buf), 0);
+				if(recvret == -1){
+					syslog(LOG_ERR, "errno: %s", strerror(errno));
+					return NULL;
+				}
+				else{
+					if((mallocsize-buf2_size) < recvret){
+						mallocsize += recvret;
+						newptr = (char*)realloc(buf2, mallocsize* sizeof(char)); //realloc if the recived bytes are more than the size of buffer
+						if(newptr!= NULL){
+							buf2=newptr;
+						}
+					}
+					memcpy(&buf2[buf2_size], buf, recvret);				//copy contents to another buffer so later can append bigger data files
+				}
+
+			buf2_size+=recvret;
+				newline = strchr(buf, '\n');	//check for newline character
+		}while(newline == NULL); 
+
+		pthread_mutex_lock(&mutex);										//lock the write functionality
+		//write into the file
+        writeret = write(storefd, buf2, buf2_size);
+            if(writeret == -1){
+                syslog(LOG_ERR, "Write error!!");
+				return NULL;
+            }
+		pthread_mutex_unlock(&mutex);	
+
+
+		end_of_file = lseek(storefd, 0, SEEK_END);
+            ret = lseek(storefd, 0, SEEK_SET);
+                if(ret == (off_t) -1){
+                    syslog(LOG_ERR, "lseek error!!");
+					return NULL;
+                }
+
+		while(setback!= end_of_file){
+			sendsize=0;
+			
+			char* buf3 = (char*)malloc(MAXSIZE*sizeof(char));
+			if(buf3 == NULL){
+				syslog(LOG_ERR,"writebuffer malloc failed!!");
+				break;
+			}
+
+	                //clear the buffer for input
+        	        memset(buf3, '\0', MAXSIZE);
+
+			//nextsize calculates the size of the next line so that we just have to realloc that much
+			nextsize = end_of_file - pos;
+
+			do{
+				pthread_mutex_lock(&mutex);										//lock the read functionality
+		               readret = read(storefd, buf3+sendsize, sizeof(char));
+	                        if(readret == -1){
+	                                syslog(LOG_ERR,"read error!!");
+									return NULL;
+	                        }       
+                pthread_mutex_unlock(&mutex);        							
+
+				if(reallocsize - sendsize < end_of_file)
+				{
+					reallocsize += nextsize ;
+					newptr2 = (char*)realloc(buf3, reallocsize*sizeof(char)); 		//realloc if the recived bytes are more than the size of buffer
+					if(newptr2 != NULL){
+						buf3 = newptr2;
+					}
+				}
+
+				sendsize += readret;
+
+				if(sendsize>1){
+				newline2 = strchr(buf3, '\n');    //check for newline character
+				}
+			}while(newline2==NULL);
+
+			pos = lseek(storefd, 0, SEEK_CUR);
+			setback+=sendsize;
+			
+			//send data
+           		sendret = send(param_value->per_thread_acceptfd, buf3, sendsize, 0);
+                        if(sendret == -1){
+                                syslog(LOG_ERR,"send error!!");
+								return NULL;
+                        }
+	
+     
+			free(buf3);
+	}
+	   //free the malloced buffers to avoid memory leak	
+	   free(buf2);
+ 	   close(acceptfd);	
+   	   syslog(LOG_INFO,"Closed connection from %s",IP);	   
+
+		param_value->thread_complete_flag = true;
+		return NULL;
+}
 
 //signal handler to handle SIGTERM and SIGINT signals
 void sig_handler(int signo)
@@ -47,25 +292,36 @@ void sig_handler(int signo)
   }
 }
 
+
+
 int main(int argc, char *argv[]){
 
-	int status, bindret, listenret, recvret, writeret, readret, sendret;		//return values for respective functions
-	int sendsize=0;																//size of each line to be sent
-	struct addrinfo hints;															
-	struct addrinfo *res;
-	struct sockaddr_in connection_addr;
-	socklen_t addr_size;
-	char buf[MAXSIZE];														    //static buffer to recieve the data into
-	char* buf3; char* newline; char* newline2;									//buffer to read data from file and buffers to check newline characters
-	off_t ret;																	
-	size_t buf2_size=0;
-	int opt=1;
-        bool daemon = false;	
-	pid_t pid; 
+	int status, bindret, listenret;										 		//return values for respective functions
+	struct addrinfo hints;														//hints addrinfo to get address		
+	struct addrinfo *res;														//stores the result
+	socklen_t addr_size;														//stores the address size of the connection			
+	int opt=1;				
+    bool daemon = false;														//boolean to check if daemon mode activated or not
+	pid_t pid; 																	
+	int id=0, rc=0;
+	struct timerthread td;														//timerthread struct to store file descriptor
+    struct sigevent sev;														//signal struct to pass timer thread
+    timer_t timerid;															//timer to be used
+	int clock_id = CLOCK_MONOTONIC;												//CLOCK used
+	struct timespec start_time;
 
+	//initialize the lined list
+	slist_data_t *llpointer=NULL;
+	SLIST_HEAD(slisthead, slist_data_s) head;
+	SLIST_INIT(&head);
+
+	//initialize the mutex
+	pthread_mutex_init(&mutex, NULL);
+
+	//open the log
 	openlog(NULL,0,LOG_USER);
 	
-	        if (signal(SIGINT, sig_handler) == SIG_ERR)				//call signal handler for SIGINT SIGTERM
+	    if (signal(SIGINT, sig_handler) == SIG_ERR)				//call signal handler for SIGINT SIGTERM
               syslog(LOG_ERR,"\ncan't catch SIGINT\n");
         else if (signal(SIGTERM, sig_handler) == SIG_ERR)
               syslog(LOG_ERR,"\ncan't catch SIGINT\n");
@@ -169,12 +425,29 @@ int main(int argc, char *argv[]){
                 dup (0); /* stderror */
         }
 
+	if(daemon == false||pid == 0){
+		memset(&sev,0,sizeof(struct sigevent));
+	    /**
+        * Setup a call to timer_thread passing in the td structure as the sigev_value
+        * argument
+        */
+		td.storefilefd = storefd;
+        sev.sigev_notify = SIGEV_THREAD;
+        sev.sigev_value.sival_ptr = &td;
+        sev.sigev_notify_function = timer_thread;
+        if ( timer_create(clock_id,&sev,&timerid) != 0 ) {
+            printf("Error %d (%s) creating timer!\n",errno,strerror(errno));
+        }
 
+		if(!(setup_timer(clock_id, timerid, 10, &start_time))){
+			printf("Timer setup error!!");
+		}
+	}
 
        addr_size = sizeof connection_addr;
 
 	while(!signalflag){
-		
+
                 //accept for a connection
                 acceptfd = accept(socketfd, (struct sockaddr*)&connection_addr, &addr_size);
                 
@@ -186,131 +459,51 @@ int main(int argc, char *argv[]){
                     return -1;
                 }
                 
-		char *IP = inet_ntoa(connection_addr.sin_addr);
-		syslog(LOG_DEBUG, "Accepted connection from %s\n", IP);
-		
-		//clear the buffer for input
-	        memset(buf, '\0', sizeof(buf));
+				//setup the values in linked list for each entry
+				llpointer = malloc(sizeof(slist_data_t));
+				(llpointer->value).per_thread_acceptfd = acceptfd;
+				(llpointer->value).threadid = id;
+				llpointer->value.thread_complete_flag = false;
 
-		//buffer to read all the values in and realloc if required
-		char* buf2 = (char*)malloc(MAXSIZE*sizeof(char));
-		if(buf2 == NULL){
-			syslog(LOG_ERR, "read buffer malloc failed!!");
-			break;
-		}
+				//insert head for each entry
+        		SLIST_INSERT_HEAD(&head, llpointer, entries);
+				id++;
 
-		int mallocsize = MAXSIZE, reallocsize = MAXSIZE;		//realloc sizes for read and write buffer
-		char* newptr = NULL; char* newptr2 =NULL;				//newptr checks the realloc return 
-		int setback=0, pos=0, end_of_file=0, nextsize=0;
-		
-		do{
-				//receive the bytes
-				recvret = recv(acceptfd, buf, sizeof(buf), 0);
-				if(recvret == -1){
-					syslog(LOG_ERR, "errno: %s", strerror(errno));
-				}
-				else{
-					if((mallocsize-buf2_size) < recvret){
-						mallocsize += recvret;
-						newptr = (char*)realloc(buf2, mallocsize* sizeof(char)); //realloc if the recived bytes are more than the size of buffer
-						if(newptr!=NULL){
-							buf2 = newptr;
-						}
-					}
-					memcpy(&buf2[buf2_size], buf, recvret);				//copy contents to another buffer so later can append bigger data files
-				}
-
-			buf2_size+=recvret;
-			newline = strchr(buf, '\n');	//check for newline character
-		}while(newline == NULL); 
-
-
-		//write into the file
-                writeret = write(storefd, buf2, buf2_size);
-                       if(writeret == -1){
-                                syslog(LOG_ERR, "Write error!!");
-                       }
-
-
-		end_of_file = lseek(storefd, 0, SEEK_END);
-                ret = lseek(storefd, 0, SEEK_SET);
-                        if(ret == (off_t) -1){
-                                syslog(LOG_ERR, "lseek error!!");
-                        }
-
-
-		while(setback!= end_of_file){
-			sendsize=0;
-			
-			buf3 = (char*)malloc(MAXSIZE*sizeof(char));
-			if(buf3 == NULL){
-				syslog(LOG_ERR,"writebuffer malloc failed!!");
-				break;
+			//create thread
+			rc = pthread_create(&((llpointer->value).thread), NULL, thread_function,(void*)&(llpointer->value));
+			if(rc!=0){
+				perror("Pthread create error!!");
+				return -1;
 			}
-
-	                //clear the buffer for input
-        	        memset(buf3, '\0', MAXSIZE);
-
-			//nextsize calculates the size of the next line so that we just have to realloc that much
-			nextsize = end_of_file - pos;
-
-			do{
-			
-		               readret = read(storefd, buf3+sendsize, sizeof(char));
-	                        if(readret == -1){
-	                                syslog(LOG_ERR,"read error!!");
-	                        }       
-                        	
-				if(reallocsize - sendsize < end_of_file)
-				{
-					reallocsize += nextsize ;
-					newptr2 = (char*)realloc(buf3, reallocsize*sizeof(char));
-					if(newptr2 != NULL){
-						buf3 =newptr2;
-					}
+				
+			//check if thread complete flag set if so join the thread
+			SLIST_FOREACH(llpointer, &head, entries) {
+    	    	if((llpointer->value).thread_complete_flag == true){
+					pthread_join((llpointer->value).thread, NULL);
 				}
-
-				sendsize += readret;
-
-				if(sendsize>1){
-				newline2 = strchr(buf3, '\n');    //check for newline character
-				}
-			}while(newline2==NULL);
-		
-			pos = lseek(storefd, 0, SEEK_CUR);
-			setback+=sendsize;
-			
-			//send data
-           		sendret = send(acceptfd, buf3, sendsize, 0);
-                        if(sendret == -1){
-                                syslog(LOG_ERR,"send error!!");
-                        }
-	
-     
-			free(buf3);
-  
-
-		}
-
-	   //free the malloced buffers to avoid memory leak	
-	   free(buf2);
- 	   close(acceptfd);	
-   	   syslog(LOG_INFO,"Closed connection from %s",IP);	   
-
-	   //reinitialize the variables for new line input from recv
-	      buf2_size =0;
-	      recvret=0;
-	      readret=0;
-	      setback=0;
-	      pos=0;
+    		}
 	}
+	
+	//if signal encountered join all the threads unconditionally
+	SLIST_FOREACH(llpointer, &head, entries) {
+		pthread_join((llpointer->value).thread, NULL);
+    }
 
-	//close the file 
+	//empty the linked list and free the data
+	while (!SLIST_EMPTY(&head)) {
+        llpointer = SLIST_FIRST(&head);
+        SLIST_REMOVE_HEAD(&head, entries);
+        free(llpointer);
+    }
+
+	//close the file and log
 	close(storefd);
 	close(socketfd);
 	close(acceptfd);
 	closelog();
+	timer_delete(timerid);
 	
+	//remove the file
 	    if(remove("/var/tmp/aesdsocketdata") == -1)                 //delete the file
     	    {   
         	syslog(LOG_ERR,"file delete error!!");
