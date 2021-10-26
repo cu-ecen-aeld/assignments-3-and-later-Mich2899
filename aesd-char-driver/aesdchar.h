@@ -32,7 +32,7 @@ struct aesd_dev
 	 */
 	struct aesd_circular_buffer buffer;		/*	circular buffer	*/
 	struct aesd_buffer_entry entry;			/* adds the entry and returns the oldest entry that was replaced when buffer filled up */
-	//struct mutext lock;	   /*Mutex locking */
+	struct mutex lock;	   /*Mutex locking */
 	struct cdev cdev;	  /* Char device structure		*/
 	int newline;
 };
