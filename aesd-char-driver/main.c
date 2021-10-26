@@ -58,10 +58,44 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
 	ssize_t retval = 0;
-	PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
+	struct aesd_dev *dev = filp->private_data;
+	struct aesd_buffer_entry* kernel_read_buff = NULL;
+	size_t read_pos=0;
+	unsigned long read_ret = 0;
+
 	/**
 	 * TODO: handle read
 	 */
+	if(mutex_lock_interruptible(&dev->lock))
+		return -ERESTARTSYS;
+
+	PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
+
+	kernel_read_buff = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->buffer, *f_pos, &read_pos);
+
+		if(kernel_read_buff == NULL){
+			retval = 0;
+			goto out;
+		}
+
+		retval = kernel_read_buff->size - read_pos ;
+
+		if(retval > count){
+			retval = count;
+		}
+
+	read_ret = copy_to_user(buf, kernel_read_buff->buffptr + read_pos, retval);
+
+	if(read_ret != 0){
+		PDEBUG("copy to user fail!!!");
+		retval = -EFAULT;
+		goto out;
+	}
+
+	*f_pos += retval;
+
+out:
+	mutex_unlock(&dev->lock);
 	return retval;
 }
 
@@ -76,14 +110,16 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 	unsigned long ret;
 	/********************************************************************************************/
 	ssize_t retval = -ENOMEM;
-	PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
+	
 	/**
 	 * TODO: handle write
 	 */
 
-	 if(mutex_lock_interruptible(&dev->lock));
+	if(mutex_lock_interruptible(&dev->lock))
 			return -ERESTARTSYS;
 
+	PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
+	
 	if(dev->newline){
 		kernel_buff = kmalloc(count, GFP_KERNEL);
 
