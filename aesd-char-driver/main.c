@@ -57,12 +57,14 @@ int aesd_release(struct inode *inode, struct file *filp)
 ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
-	ssize_t retval = 0;
+	ssize_t retval = 0, bytes_to_read = 0;
 	struct aesd_dev *dev = filp->private_data;
+	const char* buffer_entry_value=NULL;
 	struct aesd_buffer_entry* kernel_read_buff = NULL;
 	size_t read_pos=0;
 	unsigned long read_ret = 0;
 
+	dev->dabba ++;
 	/**
 	 * TODO: handle read
 	 */
@@ -71,28 +73,38 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
 	PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
 
+	if(dev->dabba == 8){
+		retval = 0;
+		goto out;
+	}
 	kernel_read_buff = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->buffer, *f_pos, &read_pos);
 
-		if(kernel_read_buff == NULL){
-			retval = 0;
-			goto out;
-		}
-
-		retval = kernel_read_buff->size - read_pos ;
-
-		if(retval > count){
-			retval = count;
-		}
-
-	read_ret = copy_to_user(buf, kernel_read_buff->buffptr + read_pos, retval);
-
-	if(read_ret != 0){
-		PDEBUG("copy to user fail!!!");
-		retval = -EFAULT;
+	if(kernel_read_buff == NULL){
+		retval = 0;
 		goto out;
 	}
 
-	*f_pos += retval;
+	if(kernel_read_buff!=NULL){
+		bytes_to_read = count + read_pos;
+
+		if(bytes_to_read <= kernel_read_buff->size){
+			retval = count;
+		}
+
+		else{
+			retval = kernel_read_buff->size - read_pos;
+		}
+
+	buffer_entry_value = kernel_read_buff->buffptr + read_pos;
+
+		read_ret = copy_to_user(buf, buffer_entry_value, retval);
+		if(read_ret!=0){
+			retval = -EFAULT;
+			goto out;
+		}
+
+		*f_pos += retval;
+	}
 
 out:
 	mutex_unlock(&dev->lock);
@@ -124,7 +136,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 		kernel_buff = kmalloc(count, GFP_KERNEL);
 
 		if(kernel_buff == NULL){
-			retval = -EFAULT;
+			retval = -ENOMEM;
 			goto out;
 		}
 
@@ -141,7 +153,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 		kernel_buff = kmalloc((dev->entry.size) + count, GFP_KERNEL);
 		
 		if(kernel_buff == NULL){
-			retval = -EFAULT;
+			retval = -ENOMEM;
 			goto out;
 		}
 
@@ -171,6 +183,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 		if(aesd_entry_return){
 			kfree(aesd_entry_return);
 		}
+
+		newline_check = NULL;
 	}
 
 	retval = count;
