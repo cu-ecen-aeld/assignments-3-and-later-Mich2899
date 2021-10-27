@@ -25,17 +25,42 @@
 #include <time.h>
 #include <sys/queue.h>
 
+#define AESD_DEBUG 1  //Remove comment on this line to enable debug
+
+#undef PDEBUG             /* undef it, just in case */
+#ifdef AESD_DEBUG
+#  ifdef __KERNEL__
+     /* This one if debugging is on, and kernel space */
+#    define PDEBUG(fmt, args...) printk( KERN_DEBUG "aesdchar: " fmt, ## args)
+#  else
+     /* This one for user space */
+#    define PDEBUG(fmt, args...) fprintf(stderr, fmt, ## args)
+#  endif
+#else
+#  define PDEBUG(fmt, args...) /* not debugging: nothing */
+#endif
+
+
 /*******************************************DEFINES*********************************************/
 #define MAXSIZE 100
 #define MYPORT "9000"  			// the port users will be connecting to
 #define BACKLOG 10     			// how many pending connections queue will hold
 
+#define USE_AESD_CHAR_DEVICE 1
+
 /***************************************GLOBAL VARIABLE*****************************************/
 
 int storefd, acceptfd, socketfd, signalflag=0;	//aesdsocketdata file fd, client fd, server socket fd
+int end_of_file=0;
 pthread_mutex_t mutex;							//mutex to be passed for thread implementation
 int mutex_ret=0;
 struct sockaddr_in connection_addr;
+
+#if USE_AESD_CHAR_DEVICE
+char* writefile = "/dev/aesdchar";
+#else
+char* writefile = "/var/tmp/aesdsocketdata";
+#endif
 
 /*************************************LINKED LIST***********************************************/
 //structure to store thread params
@@ -79,6 +104,9 @@ static inline void timespec_add( struct timespec *result,
 * The time now is saved in @param start_time
 * @return true if the timer could be setup successfuly, false otherwise
 */
+#if USE_AESD_CHAR_DEVICE
+	//PDEBUG("No timer thread");
+#else
 static bool setup_timer( int clock_id,
                          timer_t timerid, unsigned int timer_period_s,
                          struct timespec *start_time)
@@ -99,6 +127,7 @@ static bool setup_timer( int clock_id,
     }
     return success;
 }
+#endif
 
 //timer thread to print timestamps
 void timer_thread (union sigval sigval)
@@ -153,28 +182,38 @@ void* thread_function(void* thread_param){
 	struct params* param_value = (struct params*) thread_param;
 	int recvret=0, writeret=0, readret=0, sendret=0;
 	char buf[MAXSIZE];														    //static buffer to recieve the data into
-	char* newline = NULL; char* newline2 =NULL;
+	char* newline = NULL; //char* newline2 =NULL;
 	char* newptr = NULL; char* newptr2 = NULL;
 	size_t buf2_size=0;
 	int sendsize=0;																//size of each line to be sent
-	off_t ret;
-
-	char *IP = inet_ntoa(connection_addr.sin_addr);
+	int mallocsize = MAXSIZE, reallocsize = MAXSIZE;		//realloc sizes for read and write buffer
+	int setback=0, pos=0, nextsize=0;
+	char *IP = NULL;
+	char *buf2 = NULL;
+	char* buf3 = NULL;
+	char temp;
+	
+	IP = inet_ntoa(connection_addr.sin_addr);
 	syslog(LOG_DEBUG, "Accepted connection from %s\n", IP);
 
-			//clear the buffer for input
-	        memset(buf, '\0', sizeof(buf));
+	//open file
+	storefd = open(writefile, O_CREAT | O_RDWR, 0666);
+	if(storefd == -1){
+			syslog(LOG_ERR, "error: file open/creation error!! errno:%s", strerror(errno));
+			return NULL;
+	}
 
-		//buffer to read all the values in and realloc if required
-		char* buf2 = (char*)malloc(MAXSIZE*sizeof(char));
-		if(buf2 == NULL){
-			syslog(LOG_ERR, "read buffer malloc failed!!");
-		}
+	//clear the buffer for input
+	memset(buf, '\0', sizeof(buf));
 
-		int mallocsize = MAXSIZE, reallocsize = MAXSIZE;		//realloc sizes for read and write buffer
-		//char* newptr = NULL; char* newptr2 =NULL;				//newptr checks the realloc return 
-		int setback=0, pos=0, end_of_file=0, nextsize=0;
-		
+	//buffer to read all the values in and realloc if required
+	buf2 = (char*)malloc(MAXSIZE*sizeof(char));
+	if(buf2 == NULL){
+		syslog(LOG_ERR, "read buffer malloc failed!!");
+		return NULL;
+	}
+	memset(buf2, '\0', MAXSIZE);
+	
 		do{
 				//receive the bytes
 				recvret = recv(param_value->per_thread_acceptfd, buf, sizeof(buf), 0);
@@ -197,48 +236,60 @@ void* thread_function(void* thread_param){
 				newline = strchr(buf, '\n');	//check for newline character
 		}while(newline == NULL); 
 
+		PDEBUG("recieved: %s\n", buf2);
+
 		pthread_mutex_lock(&mutex);										//lock the write functionality
 		//write into the file
         writeret = write(storefd, buf2, buf2_size);
-            if(writeret == -1){
+            if(writeret != buf2_size){
                 syslog(LOG_ERR, "Write error!!");
 				return NULL;
-            }
-		pthread_mutex_unlock(&mutex);	
+            }	
 
+	    PDEBUG("writeret: %d\n", writeret);
 
+#if USE_AESD_CHAR_DEVICE
+		end_of_file += writeret;
+#else	
+		off_t ret;	
 		end_of_file = lseek(storefd, 0, SEEK_END);
             ret = lseek(storefd, 0, SEEK_SET);
                 if(ret == (off_t) -1){
                     syslog(LOG_ERR, "lseek error!!");
 					return NULL;
                 }
+#endif
+
+		pthread_mutex_unlock(&mutex);
 
 		while(setback!= end_of_file){
 			sendsize=0;
 			
-			char* buf3 = (char*)malloc(MAXSIZE*sizeof(char));
+			buf3 = (char*)malloc(MAXSIZE*sizeof(char));
 			if(buf3 == NULL){
 				syslog(LOG_ERR,"writebuffer malloc failed!!");
-				break;
+				return NULL;
 			}
 
-	                //clear the buffer for input
-        	        memset(buf3, '\0', MAXSIZE);
+			//clear the buffer for input
+			memset(buf3, '\0', MAXSIZE);
 
 			//nextsize calculates the size of the next line so that we just have to realloc that much
 			nextsize = end_of_file - pos;
 
-			do{
-				pthread_mutex_lock(&mutex);										//lock the read functionality
-		               readret = read(storefd, buf3+sendsize, sizeof(char));
-	                        if(readret == -1){
-	                                syslog(LOG_ERR,"read error!!");
-									return NULL;
-	                        }       
-                pthread_mutex_unlock(&mutex);        							
+			pthread_mutex_lock(&mutex);										//lock the read functionality
 
-				if(reallocsize - sendsize < end_of_file)
+			do{
+
+				readret = read(storefd, &temp, sizeof(char));
+					if(readret == -1){
+							syslog(LOG_ERR,"read error!!");
+							return NULL;
+					}           							
+
+				buf3[sendsize] = temp;
+
+				if(reallocsize < nextsize)
 				{
 					reallocsize += nextsize ;
 					newptr2 = (char*)realloc(buf3, reallocsize*sizeof(char)); 		//realloc if the recived bytes are more than the size of buffer
@@ -250,12 +301,20 @@ void* thread_function(void* thread_param){
 				sendsize += readret;
 
 				if(sendsize>1){
-				newline2 = strchr(buf3, '\n');    //check for newline character
+				//newline2 = strchr(buf3, '\n');    //check for newline character
 				}
-			}while(newline2==NULL);
+				PDEBUG("read: %c readret:%d setback: %d end of file: %d\n",temp,readret, setback, end_of_file);
+			}while(readret>0);
 
+			PDEBUG("read: %s\n", buf3);
+			pthread_mutex_unlock(&mutex);    
+			setback += sendsize;
+
+#if USE_AESD_CHAR_DEVICE
+		//PDEBUG("No seek cur!!\n");
+#else
 			pos = lseek(storefd, 0, SEEK_CUR);
-			setback+=sendsize;
+#endif
 			
 			//send data
            		sendret = send(param_value->per_thread_acceptfd, buf3, sendsize, 0);
@@ -266,10 +325,11 @@ void* thread_function(void* thread_param){
 	
      
 			free(buf3);
-	}
+    	}
 	   //free the malloced buffers to avoid memory leak	
 	   free(buf2);
- 	   close(acceptfd);	
+ 	   close(param_value->per_thread_acceptfd);	
+	   close(storefd);
    	   syslog(LOG_INFO,"Closed connection from %s",IP);	   
 
 		param_value->thread_complete_flag = true;
@@ -282,9 +342,8 @@ void sig_handler(int signo)
   if ((signo == SIGINT) || (signo == SIGTERM)){
     printf("Caught signal, exiting\n");
 
-    if(shutdown(socketfd, SHUT_RDWR) == -1){
-	perror("Shutdown error!!");
-        syslog(LOG_ERR, "Client Shutdown error!!");
+    if(shutdown(socketfd, SHUT_RDWR)){
+		perror("Shutdown error!!");
     }
 
 	signalflag=1;
@@ -304,11 +363,18 @@ int main(int argc, char *argv[]){
     bool daemon = false;														//boolean to check if daemon mode activated or not
 	pid_t pid; 																	
 	int id=0, rc=0;
+	
+
+#if USE_AESD_CHAR_DEVICE
+	//PDEBUG("No timer thread\n");
+#else
 	struct timerthread td;														//timerthread struct to store file descriptor
     struct sigevent sev;														//signal struct to pass timer thread
     timer_t timerid;															//timer to be used
 	int clock_id = CLOCK_MONOTONIC;												//CLOCK used
 	struct timespec start_time;
+#endif
+
 
 	//initialize the lined list
 	slist_data_t *llpointer=NULL;
@@ -396,13 +462,14 @@ int main(int argc, char *argv[]){
 	    return -1;
 	}
 
+/*
         //open file
         storefd = open("/var/tmp/aesdsocketdata", O_CREAT | O_APPEND | O_RDWR, 0666);
         if(storefd == -1){
                syslog(LOG_ERR, "error: file open/creation error!! errno:%s", strerror(errno));
                return -1;
          }
-         	
+*/         	
 	//if daemon argument provided fork the process
         if(daemon){
                 syslog(LOG_INFO, "Running in daemon mode!!");
@@ -426,11 +493,16 @@ int main(int argc, char *argv[]){
         }
 
 	if(daemon == false||pid == 0){
+
+#if USE_AESD_CHAR_DEVICE
+	//PDEBUG("Not timer thread\n");
+#else
 		memset(&sev,0,sizeof(struct sigevent));
 	    /**
         * Setup a call to timer_thread passing in the td structure as the sigev_value
         * argument
         */
+		
 		td.storefilefd = storefd;
         sev.sigev_notify = SIGEV_THREAD;
         sev.sigev_value.sival_ptr = &td;
@@ -442,6 +514,7 @@ int main(int argc, char *argv[]){
 		if(!(setup_timer(clock_id, timerid, 10, &start_time))){
 			printf("Timer setup error!!");
 		}
+#endif
 	}
 
        addr_size = sizeof connection_addr;
@@ -497,14 +570,23 @@ int main(int argc, char *argv[]){
     }
 
 	//close the file and log
+#if USE_AESD_CHAR_DEVICE
+	//PDEBUG("File close\n");
+#else
 	close(storefd);
+#endif
+
 	close(socketfd);
-	close(acceptfd);
 	closelog();
+
+#if USE_AESD_CHAR_DEVICE
+	//PDEBUG("No timer thread\n");
+#else
 	timer_delete(timerid);
+#endif
 	
 	//remove the file
-	    if(remove("/var/tmp/aesdsocketdata") == -1)                 //delete the file
+	    if(remove(writefile) == -1)                 //delete the file
     	    {   
         	syslog(LOG_ERR,"file delete error!!");
     	    }    
