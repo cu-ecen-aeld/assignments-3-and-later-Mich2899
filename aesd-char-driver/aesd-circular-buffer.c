@@ -111,13 +111,8 @@ const char *aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, 
     if(buffer == NULL || add_entry == NULL)         //return if buffer is NULL or the entry to be added is NULL
     return NULL;
 
-    if(buffer->in_offs == buffer->out_offs)         //check if the circular buffer is full 
-        buffer->full = true;
-
-    if(buffer->full){                               //if the buffer is full, advance buffer->out_offs to the new start location
-
+    if(buffer->full){
         return_ptr = buffer->entry[buffer->out_offs].buffptr;
-        buffer->out_offs = (buffer->out_offs+1) % (AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED);
     }
 
     //add the entry to the ciruclar buffer
@@ -125,15 +120,21 @@ const char *aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, 
     buffer->entry[buffer->in_offs] = *add_entry;
     buffer->in_offs = (buffer->in_offs+1) % (AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED);
 
+    if(buffer->full){                               //if the buffer is full, advance buffer->out_offs to the new start location
+
+        buffer->out_offs = (buffer->out_offs+1) % (AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED);
+    }
+
+    if(buffer->in_offs == buffer->out_offs)         //check if the circular buffer is full 
+        buffer->full = true;
+    else 
+        buffer->full = false;
+
+
     return return_ptr;
 
 
 }
-
-
-
-
-
 
 /**
 * Initializes the circular buffer described by @param buffer to an empty struct
@@ -141,4 +142,22 @@ const char *aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, 
 void aesd_circular_buffer_init(struct aesd_circular_buffer *buffer)
 {
     memset(buffer,0,sizeof(struct aesd_circular_buffer));
+}
+
+void aesd_circular_buffer_clean(struct aesd_circular_buffer *buffer)
+{
+    uint8_t index;
+    struct aesd_buffer_entry *entry;
+
+    AESD_CIRCULAR_BUFFER_FOREACH(entry, buffer, index)
+    {
+        if(entry->buffptr != NULL)
+        {
+#ifdef __KERNEL__
+            kfree(entry->buffptr);
+#else   
+             free((char *)entry->buffptr);
+#endif 
+        }
+    }
 }

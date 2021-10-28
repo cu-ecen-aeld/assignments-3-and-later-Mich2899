@@ -182,7 +182,7 @@ void* thread_function(void* thread_param){
 	struct params* param_value = (struct params*) thread_param;
 	int recvret=0, writeret=0, readret=0, sendret=0;
 	char buf[MAXSIZE];														    //static buffer to recieve the data into
-	char* newline = NULL; //char* newline2 =NULL;
+	char* newline = NULL; char* newline2 =NULL;
 	char* newptr = NULL; char* newptr2 = NULL;
 	size_t buf2_size=0;
 	int sendsize=0;																//size of each line to be sent
@@ -256,13 +256,15 @@ void* thread_function(void* thread_param){
             ret = lseek(storefd, 0, SEEK_SET);
                 if(ret == (off_t) -1){
                     syslog(LOG_ERR, "lseek error!!");
-					return NULL;
+					          return NULL;
                 }
 #endif
 
+  lseek(storefd, 0, SEEK_SET);
+
 		pthread_mutex_unlock(&mutex);
 
-		while(setback!= end_of_file){
+		while(setback < end_of_file){
 			sendsize=0;
 			
 			buf3 = (char*)malloc(MAXSIZE*sizeof(char));
@@ -277,19 +279,20 @@ void* thread_function(void* thread_param){
 			//nextsize calculates the size of the next line so that we just have to realloc that much
 			nextsize = end_of_file - pos;
 
-			pthread_mutex_lock(&mutex);										//lock the read functionality
 
 			do{
 
+			pthread_mutex_lock(&mutex);										//lock the read functionality
 				readret = read(storefd, &temp, sizeof(char));
 					if(readret == -1){
 							syslog(LOG_ERR,"read error!!");
 							return NULL;
 					}           							
+			pthread_mutex_unlock(&mutex);    
 
 				buf3[sendsize] = temp;
 
-				if(reallocsize < nextsize)
+				if(reallocsize - sendsize < nextsize)
 				{
 					reallocsize += nextsize ;
 					newptr2 = (char*)realloc(buf3, reallocsize*sizeof(char)); 		//realloc if the recived bytes are more than the size of buffer
@@ -301,17 +304,17 @@ void* thread_function(void* thread_param){
 				sendsize += readret;
 
 				if(sendsize>1){
-				//newline2 = strchr(buf3, '\n');    //check for newline character
+				newline2 = strchr(buf3, '\n');    //check for newline character
 				}
 				PDEBUG("read: %c readret:%d setback: %d end of file: %d\n",temp,readret, setback, end_of_file);
-			}while(readret>0);
+			}while(newline2 == NULL);
 
 			PDEBUG("read: %s\n", buf3);
-			pthread_mutex_unlock(&mutex);    
 			setback += sendsize;
 
 #if USE_AESD_CHAR_DEVICE
 		//PDEBUG("No seek cur!!\n");
+		pos = sendsize;
 #else
 			pos = lseek(storefd, 0, SEEK_CUR);
 #endif
@@ -325,6 +328,7 @@ void* thread_function(void* thread_param){
 	
      
 			free(buf3);
+			buf3=NULL;
     	}
 	   //free the malloced buffers to avoid memory leak	
 	   free(buf2);
@@ -585,11 +589,5 @@ int main(int argc, char *argv[]){
 	timer_delete(timerid);
 #endif
 	
-	//remove the file
-	    if(remove(writefile) == -1)                 //delete the file
-    	    {   
-        	syslog(LOG_ERR,"file delete error!!");
-    	    }    
-
 	return 0;
 }

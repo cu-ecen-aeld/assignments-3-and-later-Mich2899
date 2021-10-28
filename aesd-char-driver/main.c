@@ -64,7 +64,6 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 	size_t read_pos=0;
 	unsigned long read_ret = 0;
 
-	dev->dabba ++;
 	/**
 	 * TODO: handle read
 	 */
@@ -73,10 +72,6 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
 	PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
 
-	if(dev->dabba == 8){
-		retval = 0;
-		goto out;
-	}
 	kernel_read_buff = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->buffer, *f_pos, &read_pos);
 
 	if(kernel_read_buff == NULL){
@@ -256,6 +251,7 @@ void aesd_cleanup_module(void)
 	 */
 
 	unregister_chrdev_region(devno, 1);
+	aesd_circular_buffer_clean(&aesd_device.buffer);
 }
 
 
