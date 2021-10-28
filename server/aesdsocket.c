@@ -236,7 +236,6 @@ void* thread_function(void* thread_param){
 				newline = strchr(buf, '\n');	//check for newline character
 		}while(newline == NULL); 
 
-		PDEBUG("recieved: %s\n", buf2);
 
 		pthread_mutex_lock(&mutex);										//lock the write functionality
 		//write into the file
@@ -245,8 +244,6 @@ void* thread_function(void* thread_param){
                 syslog(LOG_ERR, "Write error!!");
 				return NULL;
             }	
-
-	    PDEBUG("writeret: %d\n", writeret);
 
 #if USE_AESD_CHAR_DEVICE
 		end_of_file += writeret;
@@ -306,10 +303,8 @@ void* thread_function(void* thread_param){
 				if(sendsize>1){
 				newline2 = strchr(buf3, '\n');    //check for newline character
 				}
-				PDEBUG("read: %c readret:%d setback: %d end of file: %d\n",temp,readret, setback, end_of_file);
 			}while(newline2 == NULL);
 
-			PDEBUG("read: %s\n", buf3);
 			setback += sendsize;
 
 #if USE_AESD_CHAR_DEVICE
