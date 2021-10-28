@@ -10,13 +10,12 @@
 
 #ifdef __KERNEL__
 #include <linux/types.h>
+#include <linux/slab.h>
 #else
 #include <stddef.h> // size_t
 #include <stdint.h> // uintx_t
 #include <stdbool.h>
 #endif
-
-#include <linux/slab.h>
 
 #define AESD_DEBUG 1  //Remove comment on this line to enable debug
 
