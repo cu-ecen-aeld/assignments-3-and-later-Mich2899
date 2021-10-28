@@ -242,6 +242,7 @@ void* thread_function(void* thread_param){
         writeret = write(storefd, buf2, buf2_size);
             if(writeret != buf2_size){
                 syslog(LOG_ERR, "Write error!!");
+				pthread_mutex_unlock(&mutex);
 				return NULL;
             }	
 
@@ -283,6 +284,7 @@ void* thread_function(void* thread_param){
 				readret = read(storefd, &temp, sizeof(char));
 					if(readret == -1){
 							syslog(LOG_ERR,"read error!!");
+							pthread_mutex_unlock(&mutex);
 							return NULL;
 					}           							
 			pthread_mutex_unlock(&mutex);    
