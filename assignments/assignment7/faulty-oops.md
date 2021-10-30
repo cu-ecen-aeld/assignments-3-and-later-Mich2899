@@ -1,3 +1,5 @@
+##**Terminal message observed on loading the module**
+```
 Unable to handle kernel NULL pointer dereference at virtual address 0000000000000000
 Mem abort info:
   ESR = 0x96000046
@@ -43,4 +45,24 @@ Call trace:
  el0_sync+0x174/0x180
 Code: d2800001 d2800000 d503233f d50323bf (b900003f) 
 ---[ end trace 0e28fb075c0033fb ]---
+```
+##**OBJDUMP of the faulty.ko file**
+```
+Disassembly of section .text:
+
+0000000000000000 <faulty_write>:
+   0:	d2800001 	mov	x1, #0x0                   	// #0
+   4:	d2800000 	mov	x0, #0x0                   	// #0
+   8:	d503233f 	paciasp
+   c:	d50323bf 	autiasp
+  10:	b900003f 	str	wzr, [x1]
+  14:	d65f03c0 	ret
+  18:	d503201f 	nop
+  1c:	d503201f 	nop
+
+```
+##**Analysis of The terminal error message and the objdump of faulty.ko**
+<br>
+As observed in the first line of the kernel oops message on the terminal, ***"Unable to handle kernel NULL pointer dereference at virtual address 0000000000000000"***,
+it tries to dereference a NULL pointer at location 0000000000000000. When the error occurs, the program counter is at  faulty_write+0x10/0x20 [faulty]. The objdump of faulty.ko using ***buildroot/output/host/bin/aarch64-linux-objdump -S buildroot/output/build/ldd-1c9053080dd9a4826e8981769cfbe183cec81ae4/misc-modules/faulty.ko*** provides the Dissassembly of the faulty_write section of the module. The 0x10 line in the faulty write points to ***str wzr, [x1]*** The "wzr" accesses a zero-valued operand and tries to store the the value in the destination x1.
 
